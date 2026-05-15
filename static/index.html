@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQL Silver 学習支援</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app">
+
+    <!-- ヘッダー: 常時表示 -->
+    <header class="header">
+      <h1 class="app-title">SQL Silver 学習支援</h1>
+      <div class="mode-bar">
+        <button id="btn-normal" class="btn btn-mode active">通常モード</button>
+        <button id="btn-weak"   class="btn btn-mode">苦手克服モード</button>
+        <button id="btn-stats"  class="btn btn-ghost">苦手分析 ▸</button>
+      </div>
+    </header>
+
+    <main class="main">
+
+      <!-- ① クイズセクション: quiz / result 両方で表示 -->
+      <section id="section-quiz">
+
+        <div id="question-loading" class="loading-state">読み込み中...</div>
+
+        <article id="question-card" hidden>
+          <div class="question-meta">
+            <span id="category-badge"   class="badge badge-category"></span>
+            <span id="difficulty-badge" class="badge badge-difficulty"></span>
+          </div>
+
+          <!-- 複数選択ヒント（multi_select_count > 1 のみ表示） -->
+          <div id="select-hint" class="select-hint" hidden></div>
+
+          <!-- 問題文（textContent でレンダリング: XSS 対策） -->
+          <p id="question-text" class="question-text"></p>
+
+          <div id="choices" class="choices"></div>
+
+          <div class="question-footer">
+            <button id="btn-submit" class="btn btn-primary" disabled>回答する</button>
+          </div>
+        </article>
+
+      </section>
+
+      <!-- ② 結果セクション: 回答後のみ表示（クイズセクションの下に続く） -->
+      <section id="section-result" hidden>
+        <div id="result-banner" class="result-banner"></div>
+
+        <div class="card">
+          <h2 class="card-heading">解説</h2>
+          <!-- explanation は開発者が登録したコンテンツのため innerHTML でレンダリング -->
+          <!-- question_text / choice_text / trap_reason は textContent を使用 -->
+          <div id="explanation" class="explanation"></div>
+
+          <!-- 間違えやすいポイント（trap_reason がある場合のみ表示） -->
+          <div id="trap-reason-box" class="trap-reason" hidden>
+            <span class="trap-label">⚠ 間違えやすいポイント</span>
+            <p id="trap-reason-text" class="trap-body"></p>
+          </div>
+        </div>
+
+        <button id="btn-next" class="btn btn-primary btn-wide">次の問題へ</button>
+      </section>
+
+      <!-- ③ 統計セクション: クイズ・結果を置換して表示 -->
+      <section id="section-stats" hidden>
+        <div class="card">
+          <h2 class="card-heading">苦手分析</h2>
+          <div id="stats-content"></div>
+        </div>
+        <button id="btn-back" class="btn btn-ghost btn-wide">← 問題に戻る</button>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
