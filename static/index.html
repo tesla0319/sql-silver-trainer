@@ -11,10 +11,15 @@
 
     <!-- ヘッダー: 常時表示 -->
     <header class="header">
-      <h1 class="app-title">SQL Silver 学習支援</h1>
+      <div class="header-top">
+        <h1 class="app-title">SQL Silver 学習支援</h1>
+        <!-- セッション統計: 回答後に更新される -->
+        <span id="session-stats" class="session-stats"></span>
+      </div>
       <div class="mode-bar">
         <button id="btn-normal" class="btn btn-mode active">通常モード</button>
-        <button id="btn-weak"   class="btn btn-mode">苦手克服モード</button>
+        <button id="btn-weak"   class="btn btn-mode">苦手克服</button>
+        <button id="btn-review" class="btn btn-mode">復習モード</button>
         <button id="btn-stats"  class="btn btn-ghost">苦手分析 ▸</button>
       </div>
     </header>
@@ -30,6 +35,8 @@
           <div class="question-meta">
             <span id="category-badge"   class="badge badge-category"></span>
             <span id="difficulty-badge" class="badge badge-difficulty"></span>
+            <!-- モードバッジ: weak / review 時のみ表示 -->
+            <span id="mode-badge" class="badge badge-mode" hidden></span>
           </div>
 
           <!-- 複数選択ヒント（multi_select_count > 1 のみ表示） -->
@@ -64,7 +71,10 @@
           </div>
         </div>
 
-        <button id="btn-next" class="btn btn-primary btn-wide">次の問題へ</button>
+        <!-- Enter キーショートカットのヒントを表示 -->
+        <button id="btn-next" class="btn btn-primary btn-wide">
+          次の問題へ <span class="key-hint">Enter</span>
+        </button>
       </section>
 
       <!-- ③ 統計セクション: クイズ・結果を置換して表示 -->

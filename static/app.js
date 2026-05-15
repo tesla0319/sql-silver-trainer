@@ -2,20 +2,30 @@
 
 /* ==========================================================
    定数（config.py の値と同期させること）
-   フロントエンドで弱点判定ロジックを再現するために必要。
-   config.py の値を変更した場合はここも合わせて更新する。
    ========================================================== */
-const MIN_ANSWERS    = 3;    // config.MIN_ANSWERS
-const WEAK_THRESHOLD = 0.5;  // config.WEAK_THRESHOLD
+const MIN_ANSWERS    = 3;
+const WEAK_THRESHOLD = 0.5;
 
 /* ==========================================================
    状態管理
    ========================================================== */
 const state = {
-  mode:        'normal',  // 'normal' | 'weak'
-  question:    null,      // 現在の問題オブジェクト（API レスポンス）
-  selectedIds: new Set(), // 選択中の choice_id
-  view:        'quiz',    // 'quiz' | 'result' | 'stats'
+  mode:        'normal',   // 'normal' | 'weak' | 'review'
+  question:    null,       // 現在の問題オブジェクト
+  selectedIds: new Set(),  // 選択中の choice_id
+
+  // セッション除外制御（同一問題連続防止・問題暗記防止）
+  // セッション中に出題済みの question_id を保持する
+  // 全問消化後はリセットし、直前問題IDのみ残す（連続防止）
+  sessionExcludeIds: new Set(),
+  lastQuestionId:    null,
+
+  // セッション統計（ページリロードまで累積）
+  sessionAnswered: 0,
+  sessionCorrect:  0,
+  streak:          0,  // 連続正解数
+
+  view: 'quiz',  // 'quiz' | 'result' | 'stats'
 };
 
 /* ==========================================================
@@ -29,10 +39,18 @@ const el = (id) => document.getElementById(id);
 document.addEventListener('DOMContentLoaded', () => {
   el('btn-normal').addEventListener('click', () => setMode('normal'));
   el('btn-weak').addEventListener('click',   () => setMode('weak'));
+  el('btn-review').addEventListener('click', () => setMode('review'));
   el('btn-stats').addEventListener('click',  loadStats);
   el('btn-submit').addEventListener('click', submitAnswer);
   el('btn-next').addEventListener('click',   loadQuestion);
   el('btn-back').addEventListener('click',   loadQuestion);
+
+  // キーボードショートカット: Enter キーで「次の問題へ」
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && state.view === 'result' && !e.repeat) {
+      loadQuestion();
+    }
+  });
 
   loadQuestion();
 });
@@ -44,6 +62,7 @@ function setMode(mode) {
   state.mode = mode;
   el('btn-normal').classList.toggle('active', mode === 'normal');
   el('btn-weak').classList.toggle('active',   mode === 'weak');
+  el('btn-review').classList.toggle('active', mode === 'review');
   loadQuestion();
 }
 
@@ -61,12 +80,26 @@ async function loadQuestion() {
   removeError();
 
   try {
-    const res = await fetch(`/api/questions/random?mode=${state.mode}`);
+    const url = buildQuestionUrl();
+    const res = await fetch(url);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.detail ?? `HTTP ${res.status}`);
     }
     state.question = await res.json();
+
+    // セッション完了検知:
+    // 返ってきた question.id が sessionExcludeIds に含まれている
+    // → 全問消化してAPIがフォールバック → セッションリセット
+    if (state.sessionExcludeIds.has(state.question.id)) {
+      state.sessionExcludeIds = new Set();
+      // 直前問題のみ残して連続出題を防ぐ
+      if (state.lastQuestionId !== null) {
+        state.sessionExcludeIds.add(state.lastQuestionId);
+      }
+    }
+    state.lastQuestionId = state.question.id;
+
     renderQuestion();
   } catch (err) {
     showError(`問題の取得に失敗しました: ${err.message}`);
@@ -75,12 +108,19 @@ async function loadQuestion() {
   }
 }
 
+function buildQuestionUrl() {
+  const params = new URLSearchParams({ mode: state.mode });
+  // セッション除外IDを全て exclude_ids として送信
+  state.sessionExcludeIds.forEach(id => params.append('exclude_ids', id));
+  return `/api/questions/random?${params.toString()}`;
+}
+
 function renderQuestion() {
   const q = state.question;
 
-  // バッジ
   el('category-badge').textContent   = q.category;
   el('difficulty-badge').textContent = difficultyStars(q.difficulty);
+  renderModeBadge();
 
   // 複数選択ヒント
   const hint = el('select-hint');
@@ -91,10 +131,8 @@ function renderQuestion() {
     hint.hidden = true;
   }
 
-  // 問題文（textContent: XSS 対策。white-space: pre-wrap でフォーマット保持）
   el('question-text').textContent = q.question_text;
 
-  // 選択肢
   const choicesEl = el('choices');
   choicesEl.textContent = '';
   choicesEl.classList.toggle('is-multi', q.multi_select_count > 1);
@@ -102,6 +140,21 @@ function renderQuestion() {
 
   el('question-card').hidden = false;
   updateSubmitButton();
+}
+
+function renderModeBadge() {
+  const badge = el('mode-badge');
+  if (state.mode === 'weak') {
+    badge.textContent = '⚠ 苦手克服中';
+    badge.className   = 'badge badge-mode badge-mode-weak';
+    badge.hidden      = false;
+  } else if (state.mode === 'review') {
+    badge.textContent = '↩ 復習中';
+    badge.className   = 'badge badge-mode badge-mode-review';
+    badge.hidden      = false;
+  } else {
+    badge.hidden = true;
+  }
 }
 
 function buildChoiceEl(id, text) {
@@ -113,7 +166,6 @@ function buildChoiceEl(id, text) {
   marker.className = 'choice-marker';
   marker.setAttribute('aria-hidden', 'true');
 
-  // textContent: XSS 対策（choice_text はユーザーに直接関係しないが念のため）
   const label      = document.createElement('span');
   label.className  = 'choice-label';
   label.textContent = text;
@@ -148,7 +200,6 @@ function updateSubmitButton() {
   btn.disabled = (count === 0);
 
   if (q && q.multi_select_count > 1 && count > 0) {
-    // 選択数カウンターで残り選択数を可視化
     btn.textContent = `回答する（${count} / ${q.multi_select_count} 選択中）`;
   } else {
     btn.textContent = '回答する';
@@ -177,6 +228,20 @@ async function submitAnswer() {
     }
 
     const result = await res.json();
+
+    // セッション除外リストに追加（回答後に追加することで、答える前に出題されることを防ぐ）
+    state.sessionExcludeIds.add(state.question.id);
+
+    // セッション統計を更新
+    state.sessionAnswered++;
+    if (result.is_correct) {
+      state.sessionCorrect++;
+      state.streak++;
+    } else {
+      state.streak = 0;
+    }
+    updateSessionStats();
+
     applyResultHighlights(result);
     renderResult(result);
 
@@ -186,36 +251,26 @@ async function submitAnswer() {
   }
 }
 
-/* 選択肢に正誤ハイライトを適用し、送信ボタンを非表示にする */
 function applyResultHighlights(result) {
   const correctSet = new Set(result.correct_choice_ids);
 
   document.querySelectorAll('.choice').forEach(c => {
     const id = Number(c.dataset.id);
-    c.classList.add('is-answered'); // pointer-events: none
-
-    if (correctSet.has(id)) {
-      c.classList.add('is-correct');  // 緑: 正解選択肢
-    } else if (state.selectedIds.has(id)) {
-      c.classList.add('is-wrong');    // 赤: 誤選択した選択肢
-    }
-    // 選択していない不正解選択肢はそのまま（グレーアウトしない）
+    c.classList.add('is-answered');
+    if (correctSet.has(id))               c.classList.add('is-correct');
+    else if (state.selectedIds.has(id))   c.classList.add('is-wrong');
   });
 
   el('btn-submit').hidden = true;
 }
 
-/* 結果バナー・解説・trap_reason をレンダリングして結果ビューに切り替える */
 function renderResult(result) {
   const banner = el('result-banner');
   banner.textContent = result.is_correct ? '✓ 正解！' : '✗ 不正解';
   banner.className   = `result-banner ${result.is_correct ? 'is-correct' : 'is-wrong'}`;
 
-  // explanation: 開発者が登録したコンテンツのため innerHTML でレンダリング
-  // <pre><code>...</code></pre> の SQL コードブロックが有効になる
   el('explanation').innerHTML = result.explanation;
 
-  // trap_reason: textContent で安全に表示
   const trapBox = el('trap-reason-box');
   if (result.trap_reason) {
     el('trap-reason-text').textContent = result.trap_reason;
@@ -225,7 +280,6 @@ function renderResult(result) {
   }
 
   setView('result');
-  // 結果セクションへスムーズスクロール（クイズセクションの下に続く）
   el('section-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -259,7 +313,6 @@ function renderStats(stats) {
     return;
   }
 
-  // 正答率の低い順にソート（苦手が上に表示される）
   const sorted = [...stats].sort((a, b) => a.accuracy - b.accuracy);
 
   sorted.forEach(s => {
@@ -270,34 +323,27 @@ function renderStats(stats) {
     const row = document.createElement('div');
     row.className = 'stat-row';
 
-    // ラベル行
     const labelLine = document.createElement('div');
     labelLine.className = 'stat-label-line';
 
     const name = document.createElement('span');
     name.className   = 'stat-name';
-    name.textContent = s.category;
-    if (isWeak) {
-      // 苦手カテゴリを視覚的に強調
-      name.textContent = `⚠ ${s.category}`;
-      name.style.color = 'var(--c-wrong)';
-    }
+    name.textContent = isWeak ? `⚠ ${s.category}` : s.category;
+    if (isWeak) name.style.color = 'var(--c-wrong)';
 
     const detail = document.createElement('span');
     detail.className   = 'stat-detail';
     detail.textContent = `${pct}% (${s.correct_count} / ${s.answered_count})`;
 
     if (!enoughData) {
-      const remaining = MIN_ANSWERS - s.answered_count;
       const note      = document.createElement('span');
       note.className   = 'stat-note';
-      note.textContent = ` — あと${remaining}問で判定対象`;
+      note.textContent = ` — あと${MIN_ANSWERS - s.answered_count}問`;
       detail.appendChild(note);
     }
 
     labelLine.append(name, detail);
 
-    // バー
     const track = document.createElement('div');
     track.className = 'stat-bar-track';
 
@@ -313,11 +359,27 @@ function renderStats(stats) {
 }
 
 /* ==========================================================
+   セッション統計
+   ========================================================== */
+function updateSessionStats() {
+  const statsEl = el('session-stats');
+  if (state.sessionAnswered === 0) {
+    statsEl.textContent = '';
+    return;
+  }
+
+  let text = `${state.sessionAnswered}問 / ${state.sessionCorrect}正解`;
+  if (state.streak >= 3) {
+    text += ` 🔥${state.streak}連続`;
+  }
+  statsEl.textContent = text;
+}
+
+/* ==========================================================
    ビュー切替
    ========================================================== */
 function setView(view) {
   state.view = view;
-  // quiz セクションは quiz・result 両方で表示（選択肢ハイライトを見せるため）
   el('section-quiz').hidden   = (view === 'stats');
   el('section-result').hidden = (view !== 'result');
   el('section-stats').hidden  = (view !== 'stats');

@@ -48,8 +48,14 @@ body {
   padding: 14px 0 12px;
   border-bottom: 2px solid var(--c-border);
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.header-top {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
 }
 
@@ -61,6 +67,15 @@ body {
 }
 
 .mode-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* セッション統計（ヘッダー右端） */
+.session-stats {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--c-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 /* ── ボタン共通 ───────────────────────────────────────────── */
 .btn {
@@ -118,6 +133,18 @@ body {
 /* 全幅ボタン */
 .btn-wide { width: 100%; padding: 12px; font-size: 0.95rem; }
 
+/* Enter キーショートカットヒント */
+.key-hint {
+  font-size: 0.72rem;
+  font-weight: 400;
+  opacity: .65;
+  border: 1px solid rgba(255,255,255,.5);
+  border-radius: 3px;
+  padding: 1px 5px;
+  letter-spacing: .02em;
+  margin-left: 4px;
+}
+
 /* ── カード ───────────────────────────────────────────────── */
 .card {
   background: var(--c-surface);
@@ -164,6 +191,10 @@ body {
 }
 .badge-category   { background: #dbeafe; color: var(--c-primary-dark); }
 .badge-difficulty { background: #f3f4f6; color: var(--c-muted); letter-spacing: .08em; }
+
+/* モードバッジ（weak/review 時に表示） */
+.badge-mode-weak   { background: var(--c-wrong-bg);  color: var(--c-wrong);  border: 1px solid #fca5a5; }
+.badge-mode-review { background: var(--c-warn-bg);   color: var(--c-warn);   border: 1px solid #fcd34d; }
 
 /* 複数選択ヒント */
 .select-hint {
@@ -377,9 +408,12 @@ body {
 @media (max-width: 600px) {
   .app { padding: 0 12px; }
 
-  .header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .header-top { flex-wrap: wrap; }
+  .session-stats { font-size: 0.78rem; }
   .mode-bar { width: 100%; }
-  .btn-mode { flex: 1; text-align: center; }
+  .btn-mode { flex: 1; text-align: center; font-size: 0.8rem; padding: 8px 8px; }
+
+  .key-hint { display: none; } /* モバイルではキーヒントを非表示 */
 
   .card, #question-card { padding: 16px; }
 
