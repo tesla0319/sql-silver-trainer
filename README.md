@@ -42,6 +42,44 @@ pytest
 
 ---
 
+## 問題データの管理
+
+問題データは `app/seed/sample_questions.py` の Python リストで管理します。
+
+### 問題を追加する
+
+1. `app/seed/sample_questions.py` に辞書を追記する
+2. 既存 DB を削除して再初期化する
+
+```bash
+# Windows
+del app.db
+# Mac/Linux
+rm app.db
+
+python -m app.seed.init_db
+```
+
+> **注意**: `init_db` は問題が0件のときのみ投入します。
+> 問題を追加した場合は `app.db` を削除して再実行してください。
+
+### 誤解パターン分析（開発者向け）
+
+ユーザーの誤答データを集計して trap_reason 改善のヒントを出力します。
+
+```bash
+python -m app.seed.analyze_misconceptions
+```
+
+出力例:
+```
+[VIEW] Q1: 次のVIEW定義のうち...
+  回答数: 12 / 誤答率: 58%
+  誤選択 5/12回 (42%): A（SELECT * FROM employees）
+```
+
+---
+
 ## API 一覧
 
 | メソッド | パス | 説明 |
