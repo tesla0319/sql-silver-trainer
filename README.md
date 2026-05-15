@@ -52,6 +52,35 @@ pytest
 | GET | `/api/stats/categories` | カテゴリ別正答率 |
 | DELETE | `/api/answers` | 回答履歴リセット（テスト用） |
 
+### GET `/api/questions/random` クエリパラメータ
+
+| パラメータ | 値 | 説明 |
+|---|---|---|
+| `mode` | `normal`（デフォルト） | 全問題からランダム出題 |
+| `mode` | `weak` | 苦手カテゴリ（正答率 < 50%、回答数 >= 3）から優先出題。苦手なし時は通常モードにフォールバック |
+| `category` | カテゴリ名（省略可） | 指定カテゴリに絞って出題（mode=normal 時のみ有効） |
+
+### GET `/api/stats/categories` レスポンス例
+
+```json
+{
+  "stats": [
+    {"category": "VIEW",  "answered_count": 10, "correct_count": 4, "accuracy": 0.4},
+    {"category": "INDEX", "answered_count": 5,  "correct_count": 1, "accuracy": 0.2}
+  ]
+}
+```
+
+- `answered_count` が 0 のカテゴリは含まれない（未着手と区別するため）
+- `accuracy` は 0.0〜1.0。フロント側で % 変換する
+
+### 苦手判定の条件（`config.py` で変更可能）
+
+| 設定値 | デフォルト | 説明 |
+|---|---|---|
+| `WEAK_THRESHOLD` | `0.5` | 正答率がこの値**未満**のカテゴリを苦手とみなす |
+| `MIN_ANSWERS` | `3` | 苦手判定に必要な最低回答数（これ未満は判定対象外）|
+
 ---
 
 ## ディレクトリ構成

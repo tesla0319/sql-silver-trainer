@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.routers import questions, answers
+from app.routers import questions, answers, stats
 
 app = FastAPI(
     title="SQL Silver 学習支援アプリ",
@@ -9,6 +9,7 @@ app = FastAPI(
 
 app.include_router(questions.router)
 app.include_router(answers.router)
+app.include_router(stats.router)
 
 
 @app.get("/health")
