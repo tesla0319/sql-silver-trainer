@@ -1123,4 +1123,318 @@ SAMPLE_QUESTIONS = [
         ],
     },
 
+    # ──────────────────────────────────────────────────────────────────
+    # 36. INDEX（1つ選べ・難易度2）UNIQUE INDEXとNULL値
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INDEX",
+        "difficulty": 2,
+        "question_text": (
+            "以下のUNIQUE INDEXが定義されているとき、email 列が NULL の行を複数行INSERTした場合の\n"
+            "動作として正しいものを1つ選んでください。\n\n"
+            "CREATE UNIQUE INDEX idx_email ON users(email);"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "OracleのB-treeインデックスはNULL値を格納しません。\n"
+            "UNIQUE INDEXの一意性チェックはインデックスを通して行われるため、\n"
+            "インデックスに存在しないNULL値は「一意性違反」とみなされません。\n\n"
+            "結果として、UNIQUE INDEXが設定された列でも複数行のNULLをINSERTできます。\n\n"
+            "これはSQL標準の仕様（NULL同士の比較はUNKNOWN）とも一致しています。\n"
+            "UNIQUE制約でも同様の動作をします（既存Q3の制約問題も参照）。\n\n"
+            "NULL値を1行だけに制限したい場合は、アプリケーション側の制御や\n"
+            "NOT NULL + UNIQUE 制約の組み合わせが必要です。"
+        ),
+        "trap_reason": "「UNIQUE INDEXはすべての値の一意性を保証するため、NULLも1行しか持てない」という誤解が頻出。B-treeインデックスはNULLを格納しないためNULL値はUNIQUEチェックの対象外になる。",
+        "choices": [
+            {"choice_text": "UNIQUE INDEXは一意性を保証するためemail=NULLの行は1行しかINSERTできない",       "is_correct": False, "display_order": 0},
+            {"choice_text": "B-treeインデックスはNULLを格納しないためUNIQUE INDEXでも複数のNULLを許容する",  "is_correct": True,  "display_order": 1},
+            {"choice_text": "NULL値はUNIQUE INDEXで重複エラー（ORA-00001）として扱われる",                  "is_correct": False, "display_order": 2},
+            {"choice_text": "2行目のNULLは自動的に別の値（シーケンス番号等）に変換されてINSERTされる",        "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 37. INDEX（1つ選べ・難易度2）複合INDEXの先頭列ルール
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INDEX",
+        "difficulty": 2,
+        "question_text": (
+            "以下の複合インデックスが定義されているとき、インデックスが使用されない可能性が最も高い\n"
+            "WHERE句を1つ選んでください。\n\n"
+            "CREATE INDEX idx_orders ON orders(status, order_date);"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "複合インデックスは先頭列（status）を条件に含む場合に有効に使われます。\n\n"
+            "各WHERE句の評価:\n"
+            "・WHERE status = 'PENDING'                        → status が先頭列 → インデックス使用可\n"
+            "・WHERE status = 'PENDING' AND order_date > ...   → 両列指定 → インデックス使用可\n"
+            "・WHERE order_date > SYSDATE - 7                  → status なし → 通常インデックス不使用\n"
+            "・WHERE status IS NOT NULL AND order_date IS NOT NULL → statusが先頭列 → インデックス使用可\n\n"
+            "先頭列を含まない条件（order_date のみ）では複合インデックスは一般に使用されません。\n"
+            "（オプティマイザがIndex Skip Scanを選択する場合もありますが、基本ルールは先頭列が必要）"
+        ),
+        "trap_reason": "「複合インデックスに含まれる列ならどれでもインデックスが使える」という誤解が多い。先頭列（第1列）を含まないWHERE句では通常インデックスは使われない。インデックス設計で先頭列の選択が重要な理由でもある。",
+        "choices": [
+            {"choice_text": "WHERE status = 'PENDING'",                              "is_correct": False, "display_order": 0},
+            {"choice_text": "WHERE status = 'PENDING' AND order_date > SYSDATE - 7", "is_correct": False, "display_order": 1},
+            {"choice_text": "WHERE order_date > SYSDATE - 7",                        "is_correct": True,  "display_order": 2},
+            {"choice_text": "WHERE status IS NOT NULL AND order_date IS NOT NULL",    "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 38. INDEX（1つ選べ・難易度2）関数適用によるINDEX無効化
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INDEX",
+        "difficulty": 2,
+        "question_text": (
+            "last_name 列にB-treeインデックスが定義されているとき、\n"
+            "そのインデックスを使用できないWHERE句を1つ選んでください。\n\n"
+            "CREATE INDEX idx_name ON employees(last_name);"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "インデックスが定義された列に関数を適用すると、通常のB-treeインデックスは使用できません。\n\n"
+            "各WHERE句の評価:\n"
+            "・WHERE last_name = 'Smith'        → 直接比較 → インデックス使用可\n"
+            "・WHERE last_name LIKE 'Sm%'       → 後方ワイルドカード → インデックス使用可\n"
+            "・WHERE UPPER(last_name) = 'SMITH' → 列に関数適用 → インデックス不使用 ✗\n"
+            "・WHERE last_name > 'S'            → 範囲検索 → インデックス使用可\n\n"
+            "UPPER(last_name)でインデックスを使いたい場合は関数ベースインデックスが必要です:\n"
+            "CREATE INDEX idx_upper ON employees(UPPER(last_name));"
+        ),
+        "trap_reason": "「列名がWHERE句に含まれているからインデックスが使える」という誤解が多い。UPPER()などの関数を列に適用すると、その列のインデックスは使用できなくなる。これは入門者が最も見落としやすい落とし穴のひとつ。",
+        "choices": [
+            {"choice_text": "WHERE last_name = 'Smith'",        "is_correct": False, "display_order": 0},
+            {"choice_text": "WHERE last_name LIKE 'Sm%'",       "is_correct": False, "display_order": 1},
+            {"choice_text": "WHERE UPPER(last_name) = 'SMITH'", "is_correct": True,  "display_order": 2},
+            {"choice_text": "WHERE last_name > 'S'",            "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 39. INDEX（1つ選べ・難易度2）B-tree INDEXとNULL
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INDEX",
+        "difficulty": 2,
+        "question_text": "OracleのB-treeインデックスのNULL値の扱いに関する説明として正しいものを1つ選んでください。",
+        "multi_select_count": 1,
+        "explanation": (
+            "OracleのB-treeインデックスはNULL値をインデックスエントリとして格納しません。\n\n"
+            "この仕様による影響:\n"
+            "・IS NULL 条件:     インデックスを使用できない（NULL値がインデックスに存在しないため）\n"
+            "                    → フルテーブルスキャンが実行される\n"
+            "・IS NOT NULL 条件: インデックスを使用できる（非NULL値はインデックスに存在するため）\n\n"
+            "NULLを多く含む列のインデックスは、NULL分だけエントリが少なくなりサイズが小さくなります。\n\n"
+            "IS NULL条件で高速検索したい場合の対策:\n"
+            "・ビットマップインデックスの使用（データウェアハウス環境向け）\n"
+            "・NULLの代わりにデフォルト値を設定してインデックスを作成する"
+        ),
+        "trap_reason": "「インデックスはNULL値も含めてすべての値を格納する」という誤解が多い。B-treeインデックスはNULLを格納しないため、IS NULL条件ではインデックスが使われない。またNULLが多い列はインデックスサイズが小さくなる（大きくなるではない）点も注意。",
+        "choices": [
+            {"choice_text": "B-treeインデックスはNULL値も格納するため、IS NULL条件でもインデックスが使われる",  "is_correct": False, "display_order": 0},
+            {"choice_text": "B-treeインデックスはNULL値を格納しないため、IS NULL条件ではフルスキャンになる",   "is_correct": True,  "display_order": 1},
+            {"choice_text": "B-treeインデックスはNULL値を最小値として格納し、昇順ソートで先頭に現れる",        "is_correct": False, "display_order": 2},
+            {"choice_text": "NULL値が多い列はB-treeインデックスのサイズが通常より大きくなる",                 "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 40. INDEX（1つ選べ・難易度2）制約で自動作成されたINDEXのDROP制限
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INDEX",
+        "difficulty": 2,
+        "question_text": (
+            "PRIMARY KEY制約によって自動作成されたインデックスを、直接DROP INDEXで削除しようとした場合の\n"
+            "動作として正しいものを1つ選んでください。"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "PRIMARY KEY制約（またはUNIQUE制約）によって自動作成されたインデックスは、\n"
+            "DROP INDEX で直接削除しようとすると ORA-02429 エラーが発生します。\n\n"
+            "ORA-02429: 主キー/一意キーの強制に使用されているインデックスは削除できません\n\n"
+            "正しい削除手順:\n"
+            "① 制約ごとインデックスを削除する:\n"
+            "   ALTER TABLE t DROP PRIMARY KEY;\n\n"
+            "② インデックスを残して制約のみ削除する:\n"
+            "   ALTER TABLE t DROP PRIMARY KEY KEEP INDEX;\n"
+            "   → その後 DROP INDEX が実行可能になる\n\n"
+            "この仕様は、制約の強制に使われているインデックスを誤って削除しないためのOracle安全機構です。"
+        ),
+        "trap_reason": "「インデックスは制約とは独立したオブジェクトなので自由にDROPできる」と思い込むパターン。PK/UNIQUE制約が有効な間は、その制約が使用しているインデックスをDROP INDEXで削除することはできない（ORA-02429）。",
+        "choices": [
+            {"choice_text": "DROP INDEXを実行するとPRIMARY KEY制約も同時に削除される",               "is_correct": False, "display_order": 0},
+            {"choice_text": "PRIMARY KEY制約が有効な間はDROP INDEXでは削除できずORA-02429エラーになる", "is_correct": True,  "display_order": 1},
+            {"choice_text": "DROP INDEXを実行してもPRIMARY KEY制約は維持されたまま削除できる",         "is_correct": False, "display_order": 2},
+            {"choice_text": "システム管理インデックスのため削除できないが、エラーではなく無視される",    "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 41. INDEX（1つ選べ・難易度1）LIKEのワイルドカードとINDEX
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INDEX",
+        "difficulty": 1,
+        "question_text": (
+            "product_name 列にB-treeインデックスが定義されているとき、\n"
+            "インデックスを使用できないWHERE句を1つ選んでください。\n\n"
+            "CREATE INDEX idx_product ON products(product_name);"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "B-treeインデックスはデータを「前方から」ソートして格納しています。\n\n"
+            "・LIKE 'Widget%'（後方ワイルドカード）: 前方一致 → インデックス使用可\n"
+            "・LIKE '%Widget'（前方ワイルドカード）: 先頭文字が不明 → インデックス不使用\n"
+            "・= 'Widget': 直接等値比較 → インデックス使用可\n"
+            "・> 'A': 範囲検索 → インデックス使用可\n\n"
+            "先頭にワイルドカード（%）を付けた LIKE は、インデックスの前方一致検索が\n"
+            "利用できないためフルテーブルスキャンになります。"
+        ),
+        "trap_reason": "LIKE '%Widget' もLIKE 'Widget%' もどちらも同じようにインデックスが使えると思い込むパターン。前方ワイルドカード（%で始まる）は先頭文字が不明なためインデックスが使えない。後方ワイルドカード（%で終わる）は前方一致として使える。",
+        "choices": [
+            {"choice_text": "WHERE product_name = 'Widget'",     "is_correct": False, "display_order": 0},
+            {"choice_text": "WHERE product_name LIKE 'Widget%'", "is_correct": False, "display_order": 1},
+            {"choice_text": "WHERE product_name LIKE '%Widget'", "is_correct": True,  "display_order": 2},
+            {"choice_text": "WHERE product_name > 'A'",          "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 42. INDEX（1つ選べ・難易度2）低選択性とフルテーブルスキャン
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INDEX",
+        "difficulty": 2,
+        "question_text": (
+            "Oracleのオプティマイザがインデックスを使用せずに\n"
+            "フルテーブルスキャン（FTS）を選択する可能性が最も高い状況として正しいものを1つ選んでください。"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "Oracleのコストベースオプティマイザ（CBO）は、インデックス使用とFTSのコストを比較して\n"
+            "実行計画を選択します。\n\n"
+            "FTSが選ばれやすい条件:\n"
+            "・列の値の種類が少ない（低カーディナリティ）場合\n"
+            "  例: 性別列（M/F）、フラグ列（0/1）、ステータス列（数種類のみ）\n"
+            "  → 多くの行が返されるため、インデックス経由よりFTSが効率的\n\n"
+            "インデックスが有効に使われる条件:\n"
+            "・列の値の種類が多い（高カーディナリティ）: 氏名・メールアドレス・注文番号など\n"
+            "・WHERE条件で返される行が全体の少数にとどまる場合\n\n"
+            "「インデックスを作れば必ず使われる」わけではなく、\n"
+            "オプティマイザが費用対効果を判断して実行計画を決定します。"
+        ),
+        "trap_reason": "「インデックスを作成すれば必ずそのインデックスが使われる」という誤解が多い。オプティマイザは列の選択性（カーディナリティ）を評価し、低選択性の列ではFTSを選ぶ場合がある。性別やフラグ列へのインデックスが効果的でないのはこのため。",
+        "choices": [
+            {"choice_text": "PRIMARY KEY列に対してINSERTとSELECTを繰り返す場合",                       "is_correct": False, "display_order": 0},
+            {"choice_text": "性別（M/F）のように値の種類が少ない列を条件にして多くの行が返される場合",   "is_correct": True,  "display_order": 1},
+            {"choice_text": "10万行のテーブルからメールアドレスで1件を検索する場合",                    "is_correct": False, "display_order": 2},
+            {"choice_text": "インデックス作成直後の初回SELECTを実行する場合",                          "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 43. INDEX（2つ選べ・難易度3）複合INDEXの使用可否
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INDEX",
+        "difficulty": 3,
+        "question_text": (
+            "以下の複合インデックスが定義されているとき、このインデックスを使用できる可能性があるものを\n"
+            "2つ選んでください。\n\n"
+            "CREATE INDEX idx_emp ON employees(department_id, salary);"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "複合インデックス(department_id, salary) の使用可否:\n\n"
+            "A: WHERE department_id = 10\n"
+            "   → 先頭列のみ指定 → インデックス使用可 ✓\n\n"
+            "B: WHERE salary > 50000\n"
+            "   → 先頭列(department_id)なし → 通常インデックス不使用\n\n"
+            "C: WHERE department_id = 10 AND salary > 50000\n"
+            "   → 先頭列 + 第2列の範囲検索 → インデックス使用可 ✓\n\n"
+            "D: WHERE department_id IS NULL\n"
+            "   → B-treeインデックスはNULLを格納しないため → インデックス不使用\n\n"
+            "先頭列を含み、かつNULL以外の条件（等値・範囲・LIKE前方一致等）であればインデックスが使われます。"
+        ),
+        "trap_reason": "複合インデックスはすべての組み合わせで使えると思いがちだが、先頭列なしのWHERE句やNULL検索（IS NULL）では使えない。第2列だけ指定したWHERE salary > 50000 が典型的なトラップ。IS NULLも見落としやすい。",
+        "choices": [
+            {"choice_text": "WHERE department_id = 10",                    "is_correct": True,  "display_order": 0},
+            {"choice_text": "WHERE salary > 50000",                        "is_correct": False, "display_order": 1},
+            {"choice_text": "WHERE department_id = 10 AND salary > 50000", "is_correct": True,  "display_order": 2},
+            {"choice_text": "WHERE department_id IS NULL",                 "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 44. INDEX（1つ選べ・難易度2）関数ベースインデックス
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INDEX",
+        "difficulty": 2,
+        "question_text": (
+            "以下のSQL文の検索性能をインデックスで改善したい場合、有効なインデックス定義を1つ選んでください。\n\n"
+            "SELECT * FROM employees WHERE UPPER(last_name) = 'SMITH';"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "列に関数（UPPER等）を適用した条件では、通常のB-treeインデックスは使用できません。\n\n"
+            "解決策: 関数ベースインデックス（Function-Based Index）を作成する\n"
+            "CREATE INDEX idx_upper_name ON employees(UPPER(last_name));\n\n"
+            "このインデックスは UPPER(last_name) の計算結果を格納するため、\n"
+            "WHERE UPPER(last_name) = 'SMITH' の条件でインデックスが使用されます。\n\n"
+            "関数ベースインデックスの利点:\n"
+            "・大文字小文字を区別しない検索に有効\n"
+            "・変換関数を使った検索をインデックスで高速化できる\n"
+            "・アプリケーション側の修正が不要"
+        ),
+        "trap_reason": "「同じ列のインデックスがあればUPPER()の条件でも使える」という誤解が多い。関数を適用すると通常インデックスは使えず、関数ベースインデックスを別途作成する必要がある。",
+        "choices": [
+            {"choice_text": "CREATE INDEX idx ON employees(last_name)",                   "is_correct": False, "display_order": 0},
+            {"choice_text": "CREATE INDEX idx ON employees(UPPER(last_name))",            "is_correct": True,  "display_order": 1},
+            {"choice_text": "CREATE UNIQUE INDEX idx ON employees(last_name)",            "is_correct": False, "display_order": 2},
+            {"choice_text": "CREATE INDEX idx ON employees(last_name, UPPER(last_name))", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 45. INDEX（2つ選べ・難易度2）INDEXが使用されない条件
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INDEX",
+        "difficulty": 2,
+        "question_text": (
+            "salary 列にB-treeインデックスが定義されているとき、\n"
+            "インデックスが使用されない（または有効に使えない）条件として正しいものを2つ選んでください。\n\n"
+            "CREATE INDEX idx_salary ON employees(salary);"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "各条件の評価:\n\n"
+            "A: WHERE NVL(salary, 0) > 50000\n"
+            "   → salary列にNVL関数を適用 → インデックス不使用 ✓\n\n"
+            "B: WHERE salary > 50000\n"
+            "   → 直接の範囲比較 → インデックス使用可\n\n"
+            "C: WHERE TO_CHAR(salary) = '50000'\n"
+            "   → salary列にTO_CHAR関数を適用 → インデックス不使用 ✓\n\n"
+            "D: WHERE salary = 50000\n"
+            "   → 直接の等値比較 → インデックス使用可\n\n"
+            "NVL・TO_CHAR・UPPER等の関数を列に適用するとインデックスが無効化されます。\n"
+            "これらの条件でインデックスを使いたい場合は関数ベースインデックスが必要です。"
+        ),
+        "trap_reason": "「NVL(salary, 0)のようなNULL対策の関数でもインデックスが無効になる」点を見落とすパターン。NVLをはじめとした関数の適用はすべてインデックスを無効化する。「salary列のインデックスがある=salary関連は全部速い」という誤解に注意。",
+        "choices": [
+            {"choice_text": "WHERE NVL(salary, 0) > 50000",     "is_correct": True,  "display_order": 0},
+            {"choice_text": "WHERE salary > 50000",              "is_correct": False, "display_order": 1},
+            {"choice_text": "WHERE TO_CHAR(salary) = '50000'",  "is_correct": True,  "display_order": 2},
+            {"choice_text": "WHERE salary = 50000",              "is_correct": False, "display_order": 3},
+        ],
+    },
+
 ]
