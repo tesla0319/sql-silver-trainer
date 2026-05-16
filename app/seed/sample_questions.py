@@ -3408,4 +3408,318 @@ SAMPLE_QUESTIONS = [
         ],
     },
 
+    # ──────────────────────────────────────────────────────────────────
+    # INTERVAL 追加10問
+    # ──────────────────────────────────────────────────────────────────
+
+    # IV-1. INTERVAL YEAR TO MONTH 基本書式（単一選択・難易度1）
+    {
+        "category": "INTERVAL",
+        "difficulty": 1,
+        "question_text": (
+            "次の INTERVAL リテラルが表す期間として正しいものを1つ選んでください。\n\n"
+            "INTERVAL '2-6' YEAR TO MONTH"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "INTERVAL 'years-months' YEAR TO MONTH の書式では、\n"
+            "ハイフン（-）で年と月を区切って記述します。\n\n"
+            "  '2-6' → 2年6ヶ月\n\n"
+            "YEAR TO MONTH 型で表現できる単位: 年・月のみ\n"
+            "（日・時間・分・秒は含めません）\n\n"
+            "使用例:\n"
+            "  DATE '2022-03-01' + INTERVAL '2-6' YEAR TO MONTH\n"
+            "  → 2024-09-01 （2年6ヶ月後）"
+        ),
+        "trap_reason": "'-'区切りが「年-月」であることを知らず、「2年と6日」や「2時間6分」と誤解するパターン。YEAR TO MONTHの書式は'年-月'、DAY TO SECONDの書式は'日 時:分:秒'と、区切り文字が全く異なる。",
+        "choices": [
+            {"choice_text": "2年6ヶ月",   "is_correct": True,  "display_order": 0},
+            {"choice_text": "2年と6日",   "is_correct": False, "display_order": 1},
+            {"choice_text": "2時間6分",   "is_correct": False, "display_order": 2},
+            {"choice_text": "2ヶ月と6週", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # IV-2. INTERVAL DAY TO SECOND 基本書式（単一選択・難易度1）
+    {
+        "category": "INTERVAL",
+        "difficulty": 1,
+        "question_text": (
+            "次の INTERVAL リテラルが表す期間として正しいものを1つ選んでください。\n\n"
+            "INTERVAL '3 12:30:00' DAY TO SECOND"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "INTERVAL 'days hours:minutes:seconds' DAY TO SECOND の書式では、\n"
+            "日数とスペースを挟んで時:分:秒を記述します。\n\n"
+            "  '3 12:30:00' → 3日12時間30分0秒\n\n"
+            "DAY TO SECOND 型で表現できる単位: 日・時間・分・秒\n"
+            "（年・月は含めません）\n\n"
+            "使用例:\n"
+            "  TIMESTAMP '2024-01-01 00:00:00' + INTERVAL '3 12:30:00' DAY TO SECOND\n"
+            "  → 2024-01-04 12:30:00"
+        ),
+        "trap_reason": "「3 12:30:00」の先頭の数字を「時間」と誤解して「3時間12分30秒」と答えるパターン。DAY TO SECONDの書式は「日 時:分:秒」の順であり、先頭の3は日数。",
+        "choices": [
+            {"choice_text": "3日12時間30分0秒",     "is_correct": True,  "display_order": 0},
+            {"choice_text": "3時間12分30秒",        "is_correct": False, "display_order": 1},
+            {"choice_text": "3日と1230秒",          "is_correct": False, "display_order": 2},
+            {"choice_text": "3年12ヶ月と30日",      "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # IV-3. DATE + INTERVAL YEAR TO MONTH の加算結果（単一選択・難易度2）
+    {
+        "category": "INTERVAL",
+        "difficulty": 2,
+        "question_text": (
+            "次の SQL の実行結果として正しいものを1つ選んでください。\n\n"
+            "SELECT DATE '2024-01-15' + INTERVAL '2-3' YEAR TO MONTH FROM DUAL;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "INTERVAL '2-3' YEAR TO MONTH は「2年3ヶ月」を表します。\n\n"
+            "計算ステップ:\n"
+            "  基準日: 2024-01-15\n"
+            "  + 2年  → 2026-01-15\n"
+            "  + 3ヶ月 → 2026-04-15\n\n"
+            "DATE 型への INTERVAL YEAR TO MONTH 加算のポイント:\n"
+            "  ・日付部分（日）はそのまま維持される\n"
+            "  ・月末日問題: 例えば 1月31日 + 1ヶ月 は 2月31日が存在しないため\n"
+            "    その月の末日（うるう年なら2/29、平年なら2/28）が返される"
+        ),
+        "trap_reason": "INTERVAL '2-3'の「3」を年と混同して「2026年3月15日」と誤答するパターン（'2-3'は2年3ヶ月）。また年だけ加算して月の加算を忘れるケースも多い。",
+        "choices": [
+            {"choice_text": "2026-04-15", "is_correct": True,  "display_order": 0},
+            {"choice_text": "2026-01-15", "is_correct": False, "display_order": 1},
+            {"choice_text": "2026-03-15", "is_correct": False, "display_order": 2},
+            {"choice_text": "2024-04-15", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # IV-4. DATE + INTERVAL DAY TO SECOND の加算（時刻込み）（単一選択・難易度2）
+    {
+        "category": "INTERVAL",
+        "difficulty": 2,
+        "question_text": (
+            "次の SQL の実行結果として正しいものを1つ選んでください。\n"
+            "（NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS' を前提とする）\n\n"
+            "SELECT DATE '2024-03-01' + INTERVAL '2 06:00:00' DAY TO SECOND FROM DUAL;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "Oracle の DATE 型は日付と時刻（時・分・秒）の両方を保持します。\n"
+            "DATE リテラル 'DATE ''2024-03-01''' の時刻部分は 00:00:00 です。\n\n"
+            "INTERVAL '2 06:00:00' DAY TO SECOND = 2日と6時間\n\n"
+            "計算ステップ:\n"
+            "  2024-03-01 00:00:00\n"
+            "  + 2日       → 2024-03-03 00:00:00\n"
+            "  + 6時間     → 2024-03-03 06:00:00\n\n"
+            "INTERVAL DAY TO SECOND を DATE に加算すると時刻が変化します。\n"
+            "NLS_DATE_FORMAT に時刻書式が含まれていないと時刻部分が表示されないことがありますが、\n"
+            "内部的には時刻を保持しています。"
+        ),
+        "trap_reason": "Oracleの DATE 型が時刻も保持していることを忘れ、日付部分しか変わらないと思い込むパターン。INTERVAL DAY TO SECONDを加算すると時刻も変化する。また「2 06:00:00」の先頭2を時間と誤解するケースもある。",
+        "choices": [
+            {"choice_text": "2024-03-03 06:00:00", "is_correct": True,  "display_order": 0},
+            {"choice_text": "2024-03-03 00:00:00", "is_correct": False, "display_order": 1},
+            {"choice_text": "2024-03-01 06:00:00", "is_correct": False, "display_order": 2},
+            {"choice_text": "エラーが発生する",     "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # IV-5. YEAR TO MONTH と DAY TO SECOND の特性の違い（2つ選べ・難易度2）
+    {
+        "category": "INTERVAL",
+        "difficulty": 2,
+        "question_text": (
+            "Oracle の INTERVAL YEAR TO MONTH 型と INTERVAL DAY TO SECOND 型の違いに関して、\n"
+            "正しい記述を2つ選んでください。\n\n"
+            "A: INTERVAL YEAR TO MONTH 型は、日・時間・分・秒の単位を格納できない\n"
+            "B: INTERVAL DAY TO SECOND 型は、年・月の単位を格納できない\n"
+            "C: SYSDATE + INTERVAL '1' MONTH は常に SYSDATE の30日後を返す\n"
+            "D: INTERVAL '1-6' YEAR TO MONTH は「1年と6秒」を意味する"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "A【正】: INTERVAL YEAR TO MONTH は年と月のみ。\n"
+            "   日・時間・分・秒の格納はできない。\n\n"
+            "B【正】: INTERVAL DAY TO SECOND は日・時間・分・秒のみ。\n"
+            "   年・月の概念はない（1ヶ月が28〜31日と可変のため厳密な変換が不可能）。\n\n"
+            "C【誤】: 1ヶ月の日数は月によって異なる（28〜31日）。\n"
+            "   INTERVAL '1' MONTH を加算すると「翌月の同日」が返る。\n"
+            "   例: DATE '2024-01-31' + INTERVAL '1' MONTH → 2024-02-29（うるう年末日）\n\n"
+            "D【誤】: INTERVAL '1-6' YEAR TO MONTH の '-' 区切りは「年-月」を意味する。\n"
+            "   '1-6' = 1年6ヶ月。秒の意味はない。"
+        ),
+        "trap_reason": "①「1ヶ月=30日固定」という誤解（Cの罠）。月を加算する場合は月単位での加算であり日数は月によって異なる。②YEAR TO MONTHの'-'区切りをDAY TO SECONDの時刻区切り（':'）と混同してDを正解と誤答するパターン。",
+        "choices": [
+            {"choice_text": "A: INTERVAL YEAR TO MONTH は日・時間・分・秒を格納できない",  "is_correct": True,  "display_order": 0},
+            {"choice_text": "B: INTERVAL DAY TO SECOND は年・月の単位を格納できない",       "is_correct": True,  "display_order": 1},
+            {"choice_text": "C: SYSDATE + INTERVAL '1' MONTH は常に30日後を返す",          "is_correct": False, "display_order": 2},
+            {"choice_text": "D: INTERVAL '1-6' YEAR TO MONTH は「1年と6秒」を意味する",    "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # IV-6. NUMTOYMINTERVAL 関数（単一選択・難易度2）
+    {
+        "category": "INTERVAL",
+        "difficulty": 2,
+        "question_text": (
+            "次の SQL の動作として正しいものを1つ選んでください。\n\n"
+            "SELECT SYSDATE + NUMTOYMINTERVAL(6, 'MONTH') FROM DUAL;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "NUMTOYMINTERVAL(n, unit) は数値を INTERVAL YEAR TO MONTH に変換する関数です。\n\n"
+            "指定できる unit:\n"
+            "  'YEAR'  → n 年のインターバルに変換\n"
+            "  'MONTH' → n ヶ月のインターバルに変換\n\n"
+            "NUMTOYMINTERVAL(6, 'MONTH') = INTERVAL '6' MONTH\n"
+            "SYSDATE + INTERVAL '6' MONTH = SYSDATEの6ヶ月後\n\n"
+            "対となる関数として NUMTODSINTERVAL(n, unit) があり、\n"
+            "こちらは 'DAY' / 'HOUR' / 'MINUTE' / 'SECOND' を unit に指定できます。\n\n"
+            "使い分け: 変数で期間を動的に計算したいときに便利。\n"
+            "  例: SYSDATE + NUMTOYMINTERVAL(v_months, 'MONTH')"
+        ),
+        "trap_reason": "NUMTOYMINTERVALという関数名に馴染みがなく「そんな関数は存在しない＝エラー」と判断するパターン。また'MONTH'の指定なのに6日後と誤解するパターン（MONTHとDAYの混同）。",
+        "choices": [
+            {"choice_text": "SYSDATEの6ヶ月後の日付を返す",     "is_correct": True,  "display_order": 0},
+            {"choice_text": "SYSDATEの6日後の日付を返す",       "is_correct": False, "display_order": 1},
+            {"choice_text": "SYSDATEの6年後の日付を返す",       "is_correct": False, "display_order": 2},
+            {"choice_text": "ORA-エラーが発生する（関数が存在しない）", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # IV-7. NUMTODSINTERVAL 関数（単一選択・難易度2）
+    {
+        "category": "INTERVAL",
+        "difficulty": 2,
+        "question_text": (
+            "次の SQL の動作として正しいものを1つ選んでください。\n\n"
+            "SELECT SYSDATE + NUMTODSINTERVAL(36, 'HOUR') FROM DUAL;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "NUMTODSINTERVAL(n, unit) は数値を INTERVAL DAY TO SECOND に変換する関数です。\n\n"
+            "指定できる unit:\n"
+            "  'DAY'    → n 日\n"
+            "  'HOUR'   → n 時間\n"
+            "  'MINUTE' → n 分\n"
+            "  'SECOND' → n 秒\n\n"
+            "NUMTODSINTERVAL(36, 'HOUR') = 36時間 = 1日12時間\n"
+            "→ SYSDATE の 36 時間（1日半）後の日時を返す\n\n"
+            "NUMTODSINTERVAL は数値変数で時間を動的に計算したい場合に特に有用です。\n"
+            "  例: 有効期限 = 作成日 + NUMTODSINTERVAL(v_expire_hours, 'HOUR')"
+        ),
+        "trap_reason": "NUMTODSINTERVALという関数名に馴染みがなく存在を知らないパターン。また36HOURを「36分」と誤解するパターン（'HOUR'と'MINUTE'の混同）。36時間 = 1日半という計算が必要。",
+        "choices": [
+            {"choice_text": "SYSDATEの36時間後（1日12時間後）の日時を返す", "is_correct": True,  "display_order": 0},
+            {"choice_text": "SYSDATEの36分後の日時を返す",                 "is_correct": False, "display_order": 1},
+            {"choice_text": "SYSDATEの36日後の日付を返す",                 "is_correct": False, "display_order": 2},
+            {"choice_text": "ORA-エラーが発生する（関数が存在しない）",     "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # IV-8. TIMESTAMP - TIMESTAMP の戻り値型（単一選択・難易度3）
+    {
+        "category": "INTERVAL",
+        "difficulty": 3,
+        "question_text": (
+            "次の SQL 文の戻り値のデータ型として正しいものを1つ選んでください。\n\n"
+            "SELECT TIMESTAMP '2024-06-01 12:00:00' - TIMESTAMP '2024-05-30 09:00:00'\n"
+            "FROM DUAL;\n\n"
+            "（参考）DATE 型どうしを減算した場合の戻り値型との違いも考慮してください。"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "Oracle での減算結果の型:\n\n"
+            "【DATE - DATE】\n"
+            "  → NUMBER 型（日数を表す小数を含む数値）\n"
+            "  例: DATE '2024-06-01' - DATE '2024-05-30' = 2（日）\n\n"
+            "【TIMESTAMP - TIMESTAMP】\n"
+            "  → INTERVAL DAY TO SECOND 型\n"
+            "  例: 上記SQLの結果 = INTERVAL '+000000002 03:00:00.000000000' DAY TO SECOND\n"
+            "  （2日3時間）\n\n"
+            "この違いは重要です。TIMESTAMP は時刻情報をナノ秒まで保持するため、\n"
+            "減算結果もINTERVALとして返すことで精度が失われません。\n"
+            "DATE は秒単位の精度であり、減算結果はシンプルな数値（日数）で返されます。"
+        ),
+        "trap_reason": "DATE-DATEは数値を返すことは知っていても、TIMESTAMP-TIMESTAMPがINTERVAL DAY TO SECONDを返すことを知らないパターン。TIMESTAMPはナノ秒精度のため、減算結果もINTERVAL型で返される（数値ではない）。",
+        "choices": [
+            {"choice_text": "INTERVAL DAY TO SECOND 型",    "is_correct": True,  "display_order": 0},
+            {"choice_text": "NUMBER 型（日数を表す数値）",   "is_correct": False, "display_order": 1},
+            {"choice_text": "INTERVAL YEAR TO MONTH 型",    "is_correct": False, "display_order": 2},
+            {"choice_text": "TIMESTAMP 型",                 "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # IV-9. INTERVAL の精度（precision）とデフォルト（2つ選べ・難易度3）
+    {
+        "category": "INTERVAL",
+        "difficulty": 3,
+        "question_text": (
+            "Oracle の INTERVAL 型の精度（precision）に関して、正しい記述を2つ選んでください。\n\n"
+            "A: INTERVAL YEAR TO MONTH のデフォルト年精度は2桁であり、格納できる最大年数は99年\n"
+            "B: INTERVAL DAY TO SECOND の秒の小数部のデフォルト精度は6桁である\n"
+            "C: INTERVAL '100' YEAR（精度指定なし）はデフォルト精度2桁の範囲内に収まるため正常に扱える\n"
+            "D: INTERVAL 型の精度は列定義やPL/SQL変数宣言で変更することはできない"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "A【正】: INTERVAL YEAR TO MONTH のデフォルト精度は YEAR(2)。\n"
+            "   格納できる年数は 0〜99 年。100年以上を格納するには YEAR(3) 以上の精度指定が必要。\n\n"
+            "B【正】: INTERVAL DAY TO SECOND のデフォルト秒精度は SECOND(6)。\n"
+            "   マイクロ秒（小数6桁）まで格納可能。最大精度は SECOND(9)（ナノ秒）。\n\n"
+            "C【誤】: INTERVAL '100' YEAR はデフォルト精度 YEAR(2) を超えるため\n"
+            "   ORA-01873 エラーが発生する。\n"
+            "   INTERVAL '100' YEAR(3) と明示的に精度を指定すれば格納可能。\n\n"
+            "D【誤】: 精度は列定義・変数宣言で個別に指定可能。\n"
+            "   例: col INTERVAL YEAR(4) TO MONTH\n"
+            "   　  col INTERVAL DAY(3) TO SECOND(9)"
+        ),
+        "trap_reason": "①デフォルト精度の存在を知らず「任意の桁数を格納できる」と思い込み、CとDを正解にするパターン。②SECOND(6)のデフォルト精度を知らず「精度は一律固定」と誤解してDを正解にするパターン。",
+        "choices": [
+            {"choice_text": "A: INTERVAL YEAR(デフォルト=2桁)、最大格納年数は99年",                        "is_correct": True,  "display_order": 0},
+            {"choice_text": "B: INTERVAL DAY TO SECOND の秒小数部のデフォルト精度は6桁",                  "is_correct": True,  "display_order": 1},
+            {"choice_text": "C: INTERVAL '100' YEAR（精度指定なし）はデフォルト精度内に収まり正常",        "is_correct": False, "display_order": 2},
+            {"choice_text": "D: INTERVAL 型の精度は定義時に変更できず全列で一律",                         "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # IV-10. INTERVAL 型の演算互換性（単一選択・難易度3）
+    {
+        "category": "INTERVAL",
+        "difficulty": 3,
+        "question_text": (
+            "次のSQL文のうち、Oracle で ORA エラーになるものを1つ選んでください。\n\n"
+            "A: SELECT INTERVAL '2' YEAR + INTERVAL '6' MONTH FROM DUAL;\n"
+            "B: SELECT INTERVAL '1' DAY + INTERVAL '12' HOUR FROM DUAL;\n"
+            "C: SELECT INTERVAL '1' YEAR + INTERVAL '1' DAY FROM DUAL;\n"
+            "D: SELECT DATE '2024-06-01' + INTERVAL '2-6' YEAR TO MONTH FROM DUAL;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "INTERVAL 型の演算互換性ルール:\n\n"
+            "A【正常】: INTERVAL YEAR + INTERVAL MONTH\n"
+            "   どちらも INTERVAL YEAR TO MONTH カテゴリ → 加算可能\n"
+            "   結果: INTERVAL '2-6' YEAR TO MONTH（2年6ヶ月）\n\n"
+            "B【正常】: INTERVAL DAY + INTERVAL HOUR\n"
+            "   どちらも INTERVAL DAY TO SECOND カテゴリ → 加算可能\n"
+            "   結果: INTERVAL '1 12:00:00' DAY TO SECOND（1日12時間）\n\n"
+            "C【エラー】: INTERVAL YEAR（YEAR TO MONTHカテゴリ）\n"
+            "          + INTERVAL DAY（DAY TO SECONDカテゴリ）\n"
+            "   2つの異なるINTERVALカテゴリの直接加算はORA-30081エラー。\n"
+            "   1ヶ月の日数が28〜31日と可変のため、両者を相互変換できないから。\n\n"
+            "D【正常】: DATE + INTERVAL YEAR TO MONTH → 日付の加算として有効。"
+        ),
+        "trap_reason": "INTERVAL YEAR TO MONTHとINTERVAL DAY TO SECONDが別の型であることを知らず、「INTERVALどうしは何でも加算できる」と誤解するパターン。1ヶ月が何日かが月によって異なるため、Oracle は両カテゴリを直接変換・加算できない仕様になっている。",
+        "choices": [
+            {"choice_text": "A: INTERVAL YEAR + INTERVAL MONTH",             "is_correct": False, "display_order": 0},
+            {"choice_text": "B: INTERVAL DAY + INTERVAL HOUR",               "is_correct": False, "display_order": 1},
+            {"choice_text": "C: INTERVAL YEAR + INTERVAL DAY（異カテゴリ加算）", "is_correct": True,  "display_order": 2},
+            {"choice_text": "D: DATE + INTERVAL YEAR TO MONTH",              "is_correct": False, "display_order": 3},
+        ],
+    },
+
 ]
