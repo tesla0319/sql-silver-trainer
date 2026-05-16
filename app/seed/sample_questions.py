@@ -3096,4 +3096,316 @@ SAMPLE_QUESTIONS = [
         ],
     },
 
+    # ──────────────────────────────────────────────────────────────────
+    # FUNCTION_NEST 追加10問
+    # ──────────────────────────────────────────────────────────────────
+
+    # FN-1. ROUND(AVG(NVL(...))) の評価順序（単一選択・難易度1）
+    {
+        "category": "FUNCTION_NEST",
+        "difficulty": 1,
+        "question_text": (
+            "次の SQL を、commission_pct が全員 NULL の部署に対して実行したとき、戻り値として正しいものを1つ選んでください。\n\n"
+            "SELECT ROUND(AVG(NVL(commission_pct, 0)), 2) FROM employees\n"
+            "WHERE department_id = 10;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "関数は内側から順に評価されます。\n\n"
+            "評価ステップ:\n"
+            "① NVL(commission_pct, 0) : commission_pct が NULL の行を 0 に変換\n"
+            "② AVG(0) : 全行が 0 なので平均も 0\n"
+            "③ ROUND(0, 2) : 0.00 → 0\n\n"
+            "NVL によって NULL が 0 に置き換わるため、AVG も ROUND も 0 を処理します。\n"
+            "NVL を省いた AVG(commission_pct) の場合は、NULL 行が集計から除外されて\n"
+            "行数が 0 になり NULL が返りますが、今回は NVL でラップしているため 0 が返ります。"
+        ),
+        "trap_reason": "NVLがAVGの内側にあることを見落とし「全員NULLならAVGもNULLになる」と誤解するパターン。NVLが先に評価されてNULLが0に変換されるので、AVGは0を集計してROUNDに渡す。",
+        "choices": [
+            {"choice_text": "NULL",           "is_correct": False, "display_order": 0},
+            {"choice_text": "0",              "is_correct": True,  "display_order": 1},
+            {"choice_text": "エラーが発生する", "is_correct": False, "display_order": 2},
+            {"choice_text": "0.00",           "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # FN-2. NVL(TO_CHAR(date_col, 'YYYY'), '不明') の動作（単一選択・難易度2）
+    {
+        "category": "FUNCTION_NEST",
+        "difficulty": 2,
+        "question_text": (
+            "次の SQL で hire_date が NULL の行に対して返される値を1つ選んでください。\n\n"
+            "SELECT NVL(TO_CHAR(hire_date, 'YYYY'), '不明') FROM employees;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "内側の TO_CHAR が先に評価されます。\n\n"
+            "評価ステップ:\n"
+            "① TO_CHAR(NULL, 'YYYY') : Oracle の TO_CHAR は NULL 引数を受け取ると NULL を返す\n"
+            "② NVL(NULL, '不明')     : 第1引数が NULL なので '不明' を返す\n\n"
+            "Oracle では日付・数値・文字変換系の関数（TO_CHAR, TO_DATE, TO_NUMBER 等）は\n"
+            "NULL 引数に対してエラーを発生させず NULL を返す仕様になっています。\n"
+            "そのため NVL に渡された時点で NULL になり、代替値の '不明' が返ります。"
+        ),
+        "trap_reason": "TO_CHAR(NULL, ...) がエラーになると思い込むパターン。Oracleの多くの単一行関数はNULL引数をエラーにせずNULLを返す。したがってNVLで受け止めることができる。",
+        "choices": [
+            {"choice_text": "'不明'",           "is_correct": True,  "display_order": 0},
+            {"choice_text": "NULL",             "is_correct": False, "display_order": 1},
+            {"choice_text": "空文字列 ('')",     "is_correct": False, "display_order": 2},
+            {"choice_text": "ORA-エラーが発生", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # FN-3. INSTR の4引数仕様（2つ選べ・難易度2）
+    {
+        "category": "FUNCTION_NEST",
+        "difficulty": 2,
+        "question_text": (
+            "Oracle の INSTR 関数の戻り値として正しいものを2つ選んでください。\n\n"
+            "INSTR(string, substring [, start_position [, occurrence]])\n\n"
+            "A: INSTR('ABCABC', 'B')       の結果は 2 である\n"
+            "B: INSTR('ABCABC', 'B', 1, 2) の結果は 5 である\n"
+            "C: INSTR('ABCABC', 'X')       の結果は -1 である\n"
+            "D: INSTR('ABCABC', 'B', 4)    の結果は 2 である"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "INSTR の引数: (文字列, 検索文字, 開始位置, 出現回数)\n\n"
+            "A【正】: 'ABCABC' でデフォルト（先頭から1回目の 'B'）→ 位置 2\n\n"
+            "B【正】: start_position=1 から数えて occurrence=2 回目の 'B' を検索\n"
+            "  → 1回目は位置2、2回目は位置5 → 結果 5\n\n"
+            "C【誤】: 見つからない場合は -1 ではなく 0 を返す（Oracle 仕様）\n"
+            "  ※ 他のDBMSでは -1 を返す実装もあるため混同に注意\n\n"
+            "D【誤】: INSTR('ABCABC', 'B', 4) は 4 番目の文字('A')から検索開始\n"
+            "  → 4文字目以降で最初の 'B' は位置 5 → 結果 5（2ではない）"
+        ),
+        "trap_reason": "①見つからないときの戻り値: Oracle は -1 ではなく 0 を返す（他DBMSと混同しやすい）。②start_position を指定した場合の検索開始位置のずれ: INSTR('ABCABC','B',4) は 4 文字目から右への検索なので結果は 5。",
+        "choices": [
+            {"choice_text": "A: INSTR('ABCABC', 'B') = 2",           "is_correct": True,  "display_order": 0},
+            {"choice_text": "B: INSTR('ABCABC', 'B', 1, 2) = 5",     "is_correct": True,  "display_order": 1},
+            {"choice_text": "C: INSTR('ABCABC', 'X') = -1",          "is_correct": False, "display_order": 2},
+            {"choice_text": "D: INSTR('ABCABC', 'B', 4) = 2",        "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # FN-4. TO_NUMBER(TO_CHAR(TO_DATE(...), 'Q')) の型変換3段ネスト（単一選択・難易度3）
+    {
+        "category": "FUNCTION_NEST",
+        "difficulty": 3,
+        "question_text": (
+            "次の SQL の実行結果として正しいものを1つ選んでください。\n\n"
+            "SELECT TO_NUMBER(TO_CHAR(TO_DATE('2024-09-15', 'YYYY-MM-DD'), 'Q')) FROM DUAL;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "内側から順に評価します。\n\n"
+            "① TO_DATE('2024-09-15', 'YYYY-MM-DD')\n"
+            "   → 日付型の 2024年9月15日 に変換\n\n"
+            "② TO_CHAR(日付, 'Q')\n"
+            "   書式 'Q' は「四半期番号（1〜4）」を返す書式モデル\n"
+            "   9月は第3四半期（7〜9月） → 文字列 '3'\n\n"
+            "③ TO_NUMBER('3') → 数値 3\n\n"
+            "書式モデル 'Q' は月から四半期番号を算出します:\n"
+            "  Q1: 1〜3月 / Q2: 4〜6月 / Q3: 7〜9月 / Q4: 10〜12月"
+        ),
+        "trap_reason": "書式モデル 'Q'（四半期）を知らず、'MM'（月番号）や 'DD'（日）と混同して9や15を選ぶパターン。また3段ネストの評価順（内側→外側）を追わずに誤答するケースも多い。",
+        "choices": [
+            {"choice_text": "3",              "is_correct": True,  "display_order": 0},
+            {"choice_text": "9",              "is_correct": False, "display_order": 1},
+            {"choice_text": "15",             "is_correct": False, "display_order": 2},
+            {"choice_text": "エラーが発生する", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # FN-5. 集計関数の2段ネスト Oracle特有仕様（単一選択・難易度3）
+    {
+        "category": "FUNCTION_NEST",
+        "difficulty": 3,
+        "question_text": (
+            "次の SQL 文のうち、Oracle で構文エラー（ORA エラー）になるものを1つ選んでください。\n\n"
+            "A: SELECT MAX(AVG(salary)) FROM employees GROUP BY department_id;\n"
+            "B: SELECT department_id, MAX(AVG(salary)) FROM employees GROUP BY department_id;\n"
+            "C: SELECT MAX(avg_sal)\n"
+            "       FROM (SELECT AVG(salary) AS avg_sal FROM employees GROUP BY department_id);\n"
+            "D: SELECT AVG(salary), MAX(salary) FROM employees GROUP BY department_id;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "Oracle では SELECT リストで集計関数を1段ネストすることが可能です（他 DBMS にない特徴）。\n\n"
+            "A【正常】: MAX(AVG(salary)) → 部門別の平均給与を求め、その最大値を返す。\n"
+            "   ネストした集計関数は単一の値を返すため、SELECT 列には列参照を持てない。\n\n"
+            "B【エラー】: department_id をSELECTに含めようとしているが、\n"
+            "   MAX(AVG(salary)) はネストした集計関数で単一値を返す式のため\n"
+            "   GROUP BY 列と同時に SELECT できない → ORA-02111 エラー\n\n"
+            "C【正常】: インラインビューで先にAVGを計算し、外側でMAXを使う書き方。\n"
+            "   2段の集計を安全に実現できる。\n\n"
+            "D【正常】: AVG と MAX は同レベルの集計関数の組み合わせで問題なし。"
+        ),
+        "trap_reason": "「集計関数のネストはどんな場合でも不可」という誤解からAをエラーと答えるパターン。Oracle限定でGROUP BY付きクエリに限り1段ネストが可能。ただしBのようにネスト集計と同一SELECT内にGROUP BY列を並べるとエラーになる。",
+        "choices": [
+            {"choice_text": "A（MAX(AVG(salary)) のみをSELECT）",              "is_correct": False, "display_order": 0},
+            {"choice_text": "B（department_id と MAX(AVG(salary)) をSELECT）", "is_correct": True,  "display_order": 1},
+            {"choice_text": "C（インラインビューで2段集計）",                   "is_correct": False, "display_order": 2},
+            {"choice_text": "D（AVG と MAX を同列でSELECT）",                   "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # FN-6. COALESCE の左から評価（単一選択・難易度2）
+    {
+        "category": "FUNCTION_NEST",
+        "difficulty": 2,
+        "question_text": (
+            "次の SQL の実行結果として正しいものを1つ選んでください。\n\n"
+            "SELECT COALESCE(NULL, NULL, 'C', 'D') FROM DUAL;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "COALESCE(expr1, expr2, ..., exprN) は引数を左から順に評価し、\n"
+            "最初に NULL でない値を返します。すべて NULL の場合は NULL を返します。\n\n"
+            "評価順:\n"
+            "  引数1: NULL → スキップ\n"
+            "  引数2: NULL → スキップ\n"
+            "  引数3: 'C'  → NULL でないので 'C' を返して終了\n"
+            "  引数4: 'D'  → 評価されない（短絡評価）\n\n"
+            "COALESCE は NVL の多引数版として覚えると良いです。\n"
+            "NVL(a, b) は COALESCE(a, b) と等価ですが、\n"
+            "COALESCE は3引数以上の NULL 連鎖を簡潔に記述できます。"
+        ),
+        "trap_reason": "「全引数を評価して最後のNULL以外を返す」または「最後の引数を返す」と誤解して 'D' を選ぶパターン。COALESCEは左から評価して最初のNULL以外を返す（短絡評価）。",
+        "choices": [
+            {"choice_text": "NULL",           "is_correct": False, "display_order": 0},
+            {"choice_text": "'C'",            "is_correct": True,  "display_order": 1},
+            {"choice_text": "'D'",            "is_correct": False, "display_order": 2},
+            {"choice_text": "エラーが発生する", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # FN-7. TRIM の LEADING/TRAILING オプション（2つ選べ・難易度2）
+    {
+        "category": "FUNCTION_NEST",
+        "difficulty": 2,
+        "question_text": (
+            "Oracle の TRIM 関数と LENGTH 関数の組み合わせに関して、正しいものを2つ選んでください。\n\n"
+            "A: TRIM(LEADING  'A' FROM 'AAABBB') の戻り値は 'BBB' である\n"
+            "B: TRIM(TRAILING 'B' FROM 'AAABBB') の戻り値は 'AAA' である\n"
+            "C: LENGTH(TRIM('  ABC  ')) の戻り値は 5 である\n"
+            "D: TRIM(' ABC ') の戻り値のデータ型は NUMBER である"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "A【正】: LEADING オプションは文字列の先頭から指定文字を除去する。\n"
+            "   'AAABBB' の先頭の 'A' をすべて除去 → 'BBB'\n\n"
+            "B【正】: TRAILING オプションは文字列の末尾から指定文字を除去する。\n"
+            "   'AAABBB' の末尾の 'B' をすべて除去 → 'AAA'\n\n"
+            "C【誤】: TRIM('  ABC  ') で両端の空白を除去すると 'ABC'（3文字）\n"
+            "   LENGTH('ABC') = 3　（5 ではない）\n\n"
+            "D【誤】: TRIM は CHARACTER 型（VARCHAR2/CHAR）を返す。NUMBER ではない。"
+        ),
+        "trap_reason": "①LENGTH(TRIM(' ABC '))を「元の文字列のまま長さを計る」と誤解して7(元の長さ)や5を選ぶパターン。TRIMが先に評価されて'ABC'になり長さは3。②TRIMの戻り値型をNUMBERと混同するケースも散見される。",
+        "choices": [
+            {"choice_text": "A: TRIM(LEADING 'A' FROM 'AAABBB') = 'BBB'",  "is_correct": True,  "display_order": 0},
+            {"choice_text": "B: TRIM(TRAILING 'B' FROM 'AAABBB') = 'AAA'", "is_correct": True,  "display_order": 1},
+            {"choice_text": "C: LENGTH(TRIM('  ABC  ')) = 5",               "is_correct": False, "display_order": 2},
+            {"choice_text": "D: TRIM(' ABC ') の戻り値型は NUMBER",          "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # FN-8. Oracle の暗黙型変換（文字列→数値）（単一選択・難易度2）
+    {
+        "category": "FUNCTION_NEST",
+        "difficulty": 2,
+        "question_text": (
+            "次の SQL を Oracle で実行したとき、戻り値として正しいものを1つ選んでください。\n\n"
+            "SELECT '100' + 50 FROM DUAL;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "Oracle SQL では、数値演算子（+）を使用した場合に文字列 '100' が\n"
+            "自動的に数値 100 に暗黙変換（Implicit Conversion）されます。\n\n"
+            "処理の流れ:\n"
+            "  '100' → TO_NUMBER('100') → 100  （暗黙変換）\n"
+            "  100 + 50 = 150\n\n"
+            "Oracle の暗黙変換ルール（数値コンテキスト）:\n"
+            "  ・数字のみで構成された文字列は数値に変換可能\n"
+            "  ・'100A' のような非数値文字を含む場合は ORA-01722 エラー\n\n"
+            "Java や Python では '100' + 50 は型エラーまたは文字列結合になりますが、\n"
+            "Oracle SQL では算術演算が優先されます。"
+        ),
+        "trap_reason": "JavaやPythonの感覚で「文字列 + 数値 = 文字列結合（'10050'）」またはエラーと誤解するパターン。OracleのSQLでは + 演算子の場合に暗黙型変換が発生して数値計算になる。||（パイプ）演算子を使った場合のみ文字列結合になる。",
+        "choices": [
+            {"choice_text": "150",             "is_correct": True,  "display_order": 0},
+            {"choice_text": "'10050'",         "is_correct": False, "display_order": 1},
+            {"choice_text": "ORA-01722 エラー", "is_correct": False, "display_order": 2},
+            {"choice_text": "NULL",            "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # FN-9. CASE式 + 集計関数のネスト（2つ選べ・難易度3）
+    {
+        "category": "FUNCTION_NEST",
+        "difficulty": 3,
+        "question_text": (
+            "次の SQL 文の動作として正しいものを2つ選んでください。\n\n"
+            "SELECT\n"
+            "  SUM(CASE WHEN salary > 5000 THEN 1 ELSE 0 END)             AS high_sal_count,\n"
+            "  AVG(CASE WHEN commission_pct IS NOT NULL THEN salary\n"
+            "           ELSE NULL END)                                      AS avg_comm_sal\n"
+            "FROM employees;\n\n"
+            "A: high_sal_count は salary が 5000 超の行数を返す\n"
+            "B: avg_comm_sal は commission_pct が NULL でない行の salary の平均を返す\n"
+            "C: commission_pct が全行 NULL の場合、avg_comm_sal は 0 を返す\n"
+            "D: CASE 式を集計関数の引数に使うと構文エラーになる"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "A【正】: SUM(CASE WHEN salary > 5000 THEN 1 ELSE 0 END)\n"
+            "   salary>5000 なら1、そうでなければ0を合計 → 条件を満たす行数を集計\n"
+            "   これは「条件付きカウント」の代表的なパターンです。\n\n"
+            "B【正】: AVG(CASE WHEN commission_pct IS NOT NULL THEN salary ELSE NULL END)\n"
+            "   commission_pct がある行の salary のみを渡し、NULL は AVG から除外される\n"
+            "   → commission_pct を持つ社員の平均給与\n\n"
+            "C【誤】: 全行が ELSE NULL → AVG は NULL のみを集計 → 結果は NULL（0 ではない）\n"
+            "   AVG は NULL を除外するため、有効な値が1つもなければ NULL を返す。\n\n"
+            "D【誤】: CASE 式は集計関数の引数として使用可能。SELECT / WHERE / HAVING\n"
+            "   すべての節で利用できる。"
+        ),
+        "trap_reason": "①「AVGはNULLを0として計算する」という誤解（正しくはNULLを除外）。全件NULLのとき0でなくNULLが返る。②CASE式と集計関数の組み合わせを「構文エラー」と思い込む誤解。条件付き集計はSQLの頻出テクニック。",
+        "choices": [
+            {"choice_text": "A: high_sal_count は salary > 5000 の行数を返す",               "is_correct": True,  "display_order": 0},
+            {"choice_text": "B: avg_comm_sal は commission_pct が NULL でない行のsalary平均", "is_correct": True,  "display_order": 1},
+            {"choice_text": "C: commission_pct が全行 NULL の場合 avg_comm_sal は 0 を返す", "is_correct": False, "display_order": 2},
+            {"choice_text": "D: CASE 式を集計関数の引数に使うと構文エラーになる",             "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # FN-10. REPLACE の全置換動作（単一選択・難易度1）
+    {
+        "category": "FUNCTION_NEST",
+        "difficulty": 1,
+        "question_text": (
+            "次の SQL の実行結果として正しいものを1つ選んでください。\n\n"
+            "SELECT REPLACE('HELLO WORLD', 'L', '') FROM DUAL;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "REPLACE(string, search_string, replacement_string) は\n"
+            "search_string のすべての出現箇所を replacement_string に置換します。\n\n"
+            "'HELLO WORLD' 内の 'L' の位置:\n"
+            "  H-E-L(3)-L(4)-O- -W-O-R-L(10)-D\n"
+            "  → 3文字目、4文字目、10文字目の 'L' がすべて空文字('')に置換\n"
+            "  → 'HEO WORD'\n\n"
+            "ポイント:\n"
+            "・REPLACE はすべての出現箇所を置換する（最初の1つだけではない）\n"
+            "・第3引数に空文字('') を渡すと検索文字が削除される\n"
+            "・第3引数を省略（NULL）すると結果が NULL になる（'' とは異なる）"
+        ),
+        "trap_reason": "①REPLACEが「最初の1つだけ置換する」という誤解で 'HELO WORLD' を選ぶパターン。REPLACEはすべての箇所を置換する。②第3引数の省略（NULL）と空文字('')の違い: 省略するとNULLが返るが、''を渡すと削除される。",
+        "choices": [
+            {"choice_text": "'HEO WORD'",       "is_correct": True,  "display_order": 0},
+            {"choice_text": "'HELO WORLD'",     "is_correct": False, "display_order": 1},
+            {"choice_text": "'HELLO WORLD'",    "is_correct": False, "display_order": 2},
+            {"choice_text": "NULL",             "is_correct": False, "display_order": 3},
+        ],
+    },
+
 ]
