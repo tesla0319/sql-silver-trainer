@@ -798,4 +798,329 @@ SAMPLE_QUESTIONS = [
         ],
     },
 
+    # ──────────────────────────────────────────────────────────────────
+    # 26. JOIN（1つ選べ・難易度1・長文）INNER JOIN と等価結合
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "JOIN",
+        "difficulty": 1,
+        "question_text": (
+            "以下の2つのSQL文の動作として正しいものを1つ選んでください。\n\n"
+            "-- SQL①\n"
+            "SELECT e.emp_name, d.dept_name\n"
+            "FROM employees e INNER JOIN departments d ON e.dept_id = d.dept_id;\n\n"
+            "-- SQL②\n"
+            "SELECT e.emp_name, d.dept_name\n"
+            "FROM employees e, departments d\n"
+            "WHERE e.dept_id = d.dept_id;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "SQL①（ANSI JOIN構文）とSQL②（Oracleの伝統的なカンマ結合）はどちらも内部結合を行い、\n"
+            "同一の結果を返します。\n\n"
+            "・INNER JOIN ... ON: ISO/ANSI標準の結合構文（Oracle 9i以降で推奨）\n"
+            "・カンマ結合 + WHERE: Oracleの伝統的な構文。現在も正常に動作する\n\n"
+            "どちらの構文もオプティマイザは同様に処理します。\n"
+            "可読性・保守性の観点からANSI構文が推奨されますが、結果は同一です。"
+        ),
+        "trap_reason": "「ANSI JOINはカンマ結合より高速」「カンマ結合はOUTER JOINになる」という誤解が頻出。どちらも内部結合であり同じ結果を返す。OUTER JOINにはならない点に注意。",
+        "choices": [
+            {"choice_text": "SQL①はANSI準拠のため最適化されるが、SQL②は最適化されず遅くなる",         "is_correct": False, "display_order": 0},
+            {"choice_text": "SQL①はINNER JOIN、SQL②はOUTER JOINを行うため結果が異なる場合がある",    "is_correct": False, "display_order": 1},
+            {"choice_text": "SQL①とSQL②は同一の内部結合を行い、同じ結果を返す",                     "is_correct": True,  "display_order": 2},
+            {"choice_text": "SQL②のカンマ結合構文はOracleでは非推奨であり、エラーになる場合がある",   "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 27. JOIN（1つ選べ・難易度1・長文）LEFT OUTER JOIN のNULL行
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "JOIN",
+        "difficulty": 1,
+        "question_text": (
+            "以下のSQL文の実行結果として正しいものを1つ選んでください。\n\n"
+            "SELECT e.emp_name, d.dept_name\n"
+            "FROM employees e LEFT OUTER JOIN departments d\n"
+            "  ON e.dept_id = d.dept_id;\n\n"
+            "一部の従業員は dept_id が departments テーブルに存在しない（未配属）とします。"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "LEFT OUTER JOIN は左表（employees）のすべての行を結果に保持します。\n"
+            "右表（departments）に一致する行がない場合は、右表の列に NULL が設定されます。\n\n"
+            "・一致する部署がある従業員: emp_name と dept_name が両方設定される\n"
+            "・一致する部署がない従業員: emp_name は設定され、dept_name は NULL になる\n\n"
+            "「未配属の従業員を含めて全従業員を抽出したい」といった場面でよく使います。\n"
+            "OUTER は省略可能で LEFT JOIN と書いても同じ意味です。"
+        ),
+        "trap_reason": "LEFT JOINで一致しない行が「除外される」と誤解するパターン。除外するのはINNER JOIN。LEFT JOINは左表のすべての行を保持し、一致しない右表の列にNULLを設定する。",
+        "choices": [
+            {"choice_text": "対応する部署が存在しない従業員は結果から除外される",                      "is_correct": False, "display_order": 0},
+            {"choice_text": "対応する部署が存在しない従業員も含まれ、dept_name にはNULLが設定される",  "is_correct": True,  "display_order": 1},
+            {"choice_text": "対応する部署が存在しない従業員の行には、すべての部署の情報が結合される",   "is_correct": False, "display_order": 2},
+            {"choice_text": "LEFT OUTER JOINでは departments 側のすべての行が保持される",             "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 28. JOIN（1つ選べ・難易度2）NATURAL JOIN の結合キー
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "JOIN",
+        "difficulty": 2,
+        "question_text": (
+            "以下のテーブル定義で NATURAL JOIN を実行するとき、結合キーとして使用される列を1つ選んでください。\n\n"
+            "employees テーブルの列: emp_id, emp_name, dept_id, manager_id\n"
+            "departments テーブルの列: dept_id, dept_name, manager_id\n\n"
+            "SELECT * FROM employees NATURAL JOIN departments;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "NATURAL JOIN は、2つのテーブルで名前が同じすべての列を自動的に結合キーとして使用します。\n\n"
+            "この例では dept_id と manager_id が両テーブルに存在するため、\n"
+            "両方を AND 条件で結合キーとして使用します。\n\n"
+            "以下の ON 句と同等です:\n"
+            "ON employees.dept_id = departments.dept_id\n"
+            "AND employees.manager_id = departments.manager_id\n\n"
+            "注意: 意図せず複数列が結合キーになり予期しない結果になることがあるため、\n"
+            "実務では NATURAL JOIN より明示的な JOIN ... ON が推奨されます。"
+        ),
+        "trap_reason": "NATURAL JOINは「最初に見つかった同名列1つだけを結合キーにする」と思い込むパターン。実際はすべての同名列が結合キーになるため、意図しない絞り込みが発生することがある。",
+        "choices": [
+            {"choice_text": "dept_id のみを結合キーとして使用する",                     "is_correct": False, "display_order": 0},
+            {"choice_text": "dept_id と manager_id の両方を結合キーとして使用する",      "is_correct": True,  "display_order": 1},
+            {"choice_text": "主キー列（emp_id）を自動的に検出して結合キーとして使用する", "is_correct": False, "display_order": 2},
+            {"choice_text": "NATURAL JOINはOracleではサポートされていない",              "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 29. JOIN（1つ選べ・難易度2）USING 句でのテーブル別名使用
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "JOIN",
+        "difficulty": 2,
+        "question_text": (
+            "以下のSQL文のSELECT句を「e.dept_id, e.emp_name, d.dept_name」に変更した場合の動作として\n"
+            "正しいものを1つ選んでください。\n\n"
+            "SELECT dept_id, e.emp_name, d.dept_name\n"
+            "FROM employees e JOIN departments d USING (dept_id);"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "USING 句で指定した結合列（dept_id）にはテーブル別名を付けられません。\n"
+            "e.dept_id と書くと ORA-25154 エラーが発生します。\n\n"
+            "USING句の結合列の参照ルール:\n"
+            "・SELECT dept_id    → OK（テーブル別名なし）\n"
+            "・SELECT e.dept_id  → NG（ORA-25154）\n"
+            "・SELECT d.dept_id  → NG（ORA-25154）\n\n"
+            "ON 句を使った場合は e.dept_id / d.dept_id のどちらも参照可能です。\n"
+            "USING句の結合列は「どちらのテーブルにも属さない共有列」として扱われるためです。"
+        ),
+        "trap_reason": "JOINの結合列には常にテーブル別名を付けられると思い込むパターン。USING句の列はどちらのテーブルにも属さない「共有列」として扱われるため、テーブル別名を付けるとORA-25154エラーになる。",
+        "choices": [
+            {"choice_text": "e.dept_id は employees 側の列を明示するため曖昧さが排除でき、問題なく実行できる", "is_correct": False, "display_order": 0},
+            {"choice_text": "USING句の結合列にテーブル別名は付けられないため ORA-25154 エラーになる",       "is_correct": True,  "display_order": 1},
+            {"choice_text": "USING句の列はSELECT句では参照できないためエラーになる",                     "is_correct": False, "display_order": 2},
+            {"choice_text": "e.dept_id と d.dept_id が両方存在するため曖昧さエラー（ORA-00918）になる",    "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 30. JOIN（1つ選べ・難易度2）Oracle固有の (+) 外部結合
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "JOIN",
+        "difficulty": 2,
+        "question_text": (
+            "以下のSQL文（Oracle固有構文）の動作として正しいものを1つ選んでください。\n\n"
+            "SELECT e.emp_name, d.dept_name\n"
+            "FROM employees e, departments d\n"
+            "WHERE e.dept_id = d.dept_id(+);"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "Oracle固有の (+) 演算子は外部結合を表します。(+) を付けた側が「省略可能（NULL許容）」な側です。\n\n"
+            "・d.dept_id(+) → departments 側が省略可能\n"
+            "・employees 側のすべての行が保持される（= LEFT OUTER JOIN 相当）\n\n"
+            "ANSI構文に直すと以下と同等です:\n"
+            "FROM employees e LEFT OUTER JOIN departments d ON e.dept_id = d.dept_id\n\n"
+            "注意: (+) を WHERE 句の両辺に付けることはできません。\n"
+            "FULL OUTER JOIN を (+) で表現することはできないため、ANSI構文を使う必要があります。"
+        ),
+        "trap_reason": "(+)を付けた側が「保持される（重要な）側」と逆に覚えるパターンが多い。(+)は「穴埋め側（NULLが入る可能性がある側）」を示す。(+)がない側のテーブルがすべての行を保持する。",
+        "choices": [
+            {"choice_text": "departments 側のすべての行が保持される（RIGHT OUTER JOIN 相当）",        "is_correct": False, "display_order": 0},
+            {"choice_text": "employees 側のすべての行が保持される（LEFT OUTER JOIN 相当）",          "is_correct": True,  "display_order": 1},
+            {"choice_text": "両側のすべての行が保持される（FULL OUTER JOIN 相当）",                  "is_correct": False, "display_order": 2},
+            {"choice_text": "(+) を WHERE 句の両辺に付けることでFULL OUTER JOINが実現できる",        "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 31. JOIN（1つ選べ・難易度1）CROSS JOIN の結果行数
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "JOIN",
+        "difficulty": 1,
+        "question_text": (
+            "以下のSQL文の結果として返される行数を1つ選んでください。\n\n"
+            "SELECT * FROM table_a CROSS JOIN table_b;\n\n"
+            "table_a: 4行、table_b: 5行"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "CROSS JOIN（直積・デカルト積）は、2つのテーブルのすべての行の組み合わせを返します。\n\n"
+            "結果行数 = 左テーブルの行数 × 右テーブルの行数 = 4 × 5 = 20行\n\n"
+            "CROSS JOIN の特徴:\n"
+            "・ON 句や結合条件を持たない\n"
+            "・テーブルが大きいほど結果が爆発的に増える\n"
+            "・Oracleではカンマ結合でWHERE条件なしにすると意図せず同じ結果になる（デカルト積バグ）"
+        ),
+        "trap_reason": "CROSS JOINの行数を「左+右」の加算（9行）と誤解するパターン。正しくは「左×右」の乗算（20行）。結合条件なしのデカルト積を意図せず作ってしまうSQLバグの代表例。",
+        "choices": [
+            {"choice_text": "4行（table_a の行数）", "is_correct": False, "display_order": 0},
+            {"choice_text": "5行（table_b の行数）", "is_correct": False, "display_order": 1},
+            {"choice_text": "9行（4 + 5）",          "is_correct": False, "display_order": 2},
+            {"choice_text": "20行（4 × 5）",         "is_correct": True,  "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 32. JOIN（2つ選べ・難易度2）FULL OUTER JOIN の動作
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "JOIN",
+        "difficulty": 2,
+        "question_text": (
+            "以下のSQL文とデータに関する説明として正しいものを2つ選んでください。\n\n"
+            "SELECT a.id AS a_id, b.id AS b_id\n"
+            "FROM tbl_a a FULL OUTER JOIN tbl_b b ON a.id = b.id;\n\n"
+            "tbl_a の id 列の値: 1, 2, 3\n"
+            "tbl_b の id 列の値: 2, 3, 4"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "FULL OUTER JOIN は LEFT OUTER JOIN と RIGHT OUTER JOIN を合わせた結果を返します。\n\n"
+            "このクエリの結果（4行）:\n"
+            "・id=1（tbl_aのみ）: a_id=1, b_id=NULL\n"
+            "・id=2（両方一致）:  a_id=2, b_id=2\n"
+            "・id=3（両方一致）:  a_id=3, b_id=3\n"
+            "・id=4（tbl_bのみ）: a_id=NULL, b_id=4\n\n"
+            "FULL OUTER JOIN はどちらのテーブルにしか存在しない行も保持し、\n"
+            "もう一方のテーブルの列には NULL を設定します。\n\n"
+            "OracleではFULL OUTER JOINはANSI構文でのみ記述可能です。\n"
+            "(+) 演算子ではFULL OUTER JOINを表現できません。"
+        ),
+        "trap_reason": "FULL OUTER JOINの結果が「両方に存在する行のみ」（= INNER JOIN）と誤解するパターン。FULL JOINはどちらか一方にしかない行も保持しNULLを設定する。また(+)でFULL JOINが書けると思い込むパターンも頻出。",
+        "choices": [
+            {"choice_text": "id=1（tbl_aのみ）の行は結果に含まれ、b_id はNULLになる",             "is_correct": True,  "display_order": 0},
+            {"choice_text": "結果に含まれる行は id=2 と id=3 の2行のみである",                    "is_correct": False, "display_order": 1},
+            {"choice_text": "id=4（tbl_bのみ）の行は結果に含まれ、a_id はNULLになる",             "is_correct": True,  "display_order": 2},
+            {"choice_text": "OracleではFULL OUTER JOINを (+) 演算子を使って記述できる",            "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 33. JOIN（1つ選べ・難易度2）NULLを含む列のJOIN
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "JOIN",
+        "difficulty": 2,
+        "question_text": (
+            "以下のSQL文において、tbl_a に code = NULL の行が存在する場合の動作として\n"
+            "正しいものを1つ選んでください。\n\n"
+            "SELECT a.col1, b.col2\n"
+            "FROM tbl_a a JOIN tbl_b b ON a.code = b.code;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "INNER JOIN の結合条件 ON a.code = b.code で NULL を比較した場合、\n"
+            "NULL = NULL は TRUE ではなく UNKNOWN（不明）として評価されます。\n\n"
+            "SQLでは条件が UNKNOWN の行は結果から除外されるため、\n"
+            "a.code = NULL の行は結合条件を満たさず、結果に含まれません。\n\n"
+            "NULL同士を一致させたい場合は明示的な IS NULL チェックが必要です:\n"
+            "ON (a.code = b.code OR (a.code IS NULL AND b.code IS NULL))"
+        ),
+        "trap_reason": "「NULL = NULLはTRUEになりNULL同士で結合される」という誤解が非常に多い。SQLの3値論理ではNULL = NULLはUNKNOWNであり、JOIN条件を満たさないため行は除外される。LEFT JOINとは異なる動作なので混同しないこと。",
+        "choices": [
+            {"choice_text": "NULL = NULL はTRUEとして扱われ、tbl_b のNULL行と結合されて結果に含まれる",  "is_correct": False, "display_order": 0},
+            {"choice_text": "NULL = NULL はUNKNOWNとして扱われ、code=NULLの行は結果に含まれない",       "is_correct": True,  "display_order": 1},
+            {"choice_text": "NULLを含む列でJOINを実行するとORA-01427エラーが発生する",                 "is_correct": False, "display_order": 2},
+            {"choice_text": "code=NULLの行はLEFT JOINと同様に結果に含まれ、b.col2にはNULLが設定される", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 34. JOIN（2つ選べ・難易度2・長文）3テーブルJOIN
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "JOIN",
+        "difficulty": 2,
+        "question_text": (
+            "以下のSQL文の実行結果に関する説明として正しいものを2つ選んでください。\n\n"
+            "SELECT e.emp_name, d.dept_name, l.city\n"
+            "FROM employees e\n"
+            "  JOIN departments d ON e.department_id = d.department_id\n"
+            "  JOIN locations l ON d.location_id = l.location_id;"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "このSQL文は employees・departments・locations の3テーブルを INNER JOIN で結合しています。\n\n"
+            "INNER JOIN の特性:\n"
+            "・departments に一致しない従業員は結果に含まれない\n"
+            "・locations に一致しない部署に属する従業員も結果に含まれない\n"
+            "・ANSI INNER JOIN は記述順序を変えても最終的な結果は変わらない\n\n"
+            "このSQL文は以下のWHERE結合でも同じ結果が得られます:\n"
+            "FROM employees e, departments d, locations l\n"
+            "WHERE e.department_id = d.department_id\n"
+            "  AND d.location_id = l.location_id;"
+        ),
+        "trap_reason": "「INNER JOINの順序を変えると結果が変わる」という誤解がある。ANSI INNER JOINは結合順序によって最終結果は変わらない。また、WHERE句のカンマ結合で同じ3テーブル結合が書けることを知らないケースも多い。",
+        "choices": [
+            {"choice_text": "いずれかの結合条件に一致しない従業員は結果に含まれない",                        "is_correct": True,  "display_order": 0},
+            {"choice_text": "JOIN句の記述順序を入れ替えると結果の行数が変わる場合がある",                     "is_correct": False, "display_order": 1},
+            {"choice_text": "FROM句にカンマ区切りで3テーブルを並べWHERE句に結合条件を書いても同じ結果になる", "is_correct": True,  "display_order": 2},
+            {"choice_text": "3テーブルを結合する場合、ON句は最後のJOINにのみ書けるという制約がある",          "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 35. JOIN（2つ選べ・難易度3・長文）USING 句と ON 句の違い
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "JOIN",
+        "difficulty": 3,
+        "question_text": (
+            "JOIN構文における USING 句と ON 句の違いとして正しいものを2つ選んでください。\n\n"
+            "-- 書き方A: ON句\n"
+            "SELECT e.dept_id, e.emp_name, d.dept_name\n"
+            "FROM employees e JOIN departments d ON e.dept_id = d.dept_id;\n\n"
+            "-- 書き方B: USING句\n"
+            "SELECT dept_id, e.emp_name, d.dept_name\n"
+            "FROM employees e JOIN departments d USING (dept_id);"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "USING 句と ON 句の主な違い:\n\n"
+            "① 結合列の重複:\n"
+            "・ON 句: SELECT * を実行すると e.dept_id と d.dept_id が別々の2列として返される\n"
+            "・USING 句: SELECT * を実行すると dept_id は1列だけ返される（重複なし）\n\n"
+            "② テーブル別名の使用:\n"
+            "・ON 句: e.dept_id / d.dept_id どちらも使用可能\n"
+            "・USING 句: dept_id のみ使用可。e.dept_id と書くと ORA-25154 エラー\n\n"
+            "③ 条件の柔軟性:\n"
+            "・ON 句: 等号以外（>、<、BETWEEN 等）も使用可能\n"
+            "・USING 句: 等価結合（=）のみ使用可能"
+        ),
+        "trap_reason": "USINGとONが「完全に同じ動作をする別の書き方」と思い込むパターン。SELECT *での列数の違い（USING=1列、ON=2列）と、テーブル別名の使用可否が試験頻出の差異。特にUSINGでテーブル別名を付けるとエラーになる点を押さえること。",
+        "choices": [
+            {"choice_text": "USING句ではSELECT *を実行すると結合列（dept_id）は1列のみ返される",              "is_correct": True,  "display_order": 0},
+            {"choice_text": "ON句ではSELECT *を実行するとe.dept_idとd.dept_idが別々の2列として返される",     "is_correct": True,  "display_order": 1},
+            {"choice_text": "USING句はON句より常に高速に実行される",                                         "is_correct": False, "display_order": 2},
+            {"choice_text": "USING句でもe.dept_idのようにテーブル別名を付けて結合列を参照できる",             "is_correct": False, "display_order": 3},
+        ],
+    },
+
 ]
