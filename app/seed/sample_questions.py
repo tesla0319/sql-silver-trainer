@@ -454,4 +454,348 @@ SAMPLE_QUESTIONS = [
             {"choice_text": "D（COUNT(*) と COUNT(列名) の動作が異なる）",       "is_correct": True,  "display_order": 3},
         ],
     },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 16. VIEW（1つ選べ・難易度1）CREATE OR REPLACE VIEW
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "VIEW",
+        "difficulty": 1,
+        "question_text": "CREATE OR REPLACE VIEW 構文に関する説明として正しいものを1つ選んでください。",
+        "multi_select_count": 1,
+        "explanation": (
+            "CREATE OR REPLACE VIEW は、同名のビューが既に存在する場合でも DROP せずにビュー定義を置き換えます。\n\n"
+            "OR REPLACE の主なメリット:\n"
+            "・DROP → CREATE の2ステップが不要\n"
+            "・既存ビューに付与されたオブジェクト権限（GRANT）が引き継がれる\n"
+            "  （DROP → CREATE にすると権限が消えてしまう）\n"
+            "・依存するオブジェクトが意図せず INVALID になるリスクを減らせる\n\n"
+            "ビューが存在しない場合は通常の CREATE VIEW と同じ動作をします。"
+        ),
+        "trap_reason": "「OR REPLACEはDROPしてから再作成するため権限が失われる」という誤解が頻出。実際はオブジェクト権限が引き継がれる点が DROP→CREATE との最大の違い。",
+        "choices": [
+            {"choice_text": "OR REPLACEを指定すると既存ビューをDROPしてから再作成するため、付与済みの権限は失われる",   "is_correct": False, "display_order": 0},
+            {"choice_text": "OR REPLACEを指定すると既存ビューの権限を引き継いだままビュー定義を置き換えられる",         "is_correct": True,  "display_order": 1},
+            {"choice_text": "OR REPLACEは同名ビューが存在する場合にのみ有効で、存在しない場合はエラーになる",           "is_correct": False, "display_order": 2},
+            {"choice_text": "OR REPLACEを使うと、そのビューを参照する全オブジェクトが自動再コンパイルされVALIDになる",  "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 17. VIEW（1つ選べ・難易度2）FORCE オプション
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "VIEW",
+        "difficulty": 2,
+        "question_text": (
+            "次のSQL文を実行した時点では、テーブル future_data が存在しないとします。\n\n"
+            "CREATE FORCE VIEW v_future AS\n"
+            "  SELECT id, name FROM future_data;\n\n"
+            "この文の実行結果として正しいものを1つ選んでください。"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "FORCE オプションを指定すると、ベーステーブルが存在しなくてもビューを作成できます。\n"
+            "ただし、ビューは INVALID（無効）状態として登録されます。\n\n"
+            "その後の挙動:\n"
+            "・future_data テーブルを作成後にビューにアクセスすると、自動的に再コンパイルされ VALID になる\n"
+            "・FORCE なし（デフォルトは NOFORCE）の場合は、ベーステーブル不在でエラーになる\n\n"
+            "FORCE の用途:\n"
+            "・テーブルより先にビューを定義する必要があるスクリプト作成時\n"
+            "・開発中にオブジェクトの依存関係に関わらずビューを先に作成したい場合"
+        ),
+        "trap_reason": "FORCEを指定するとビューが正常に使えると誤解しやすいが、実際はINVALID状態で登録される。ベーステーブルを作成した後、初回アクセス時に初めてVALIDになる。",
+        "choices": [
+            {"choice_text": "future_data が存在しないためエラーになり、ビューは作成されない",              "is_correct": False, "display_order": 0},
+            {"choice_text": "ビューは INVALID 状態で作成され、future_data 作成後に初めて使用可能になる",   "is_correct": True,  "display_order": 1},
+            {"choice_text": "ビューは VALID 状態で作成され、future_data がなくてもSELECTが実行できる",    "is_correct": False, "display_order": 2},
+            {"choice_text": "FORCE は読み取り専用ビューを作成するオプションであり、テーブルの有無とは関係ない", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 18. VIEW（2つ選べ・難易度2）更新不可になる条件
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "VIEW",
+        "difficulty": 2,
+        "question_text": (
+            "次のVIEW定義のうち、DML操作（INSERT/UPDATE/DELETE）が実行できないものを2つ選んでください。\n\n"
+            "A: CREATE VIEW v_a AS SELECT DISTINCT department_id FROM employees;\n"
+            "B: CREATE VIEW v_b AS SELECT employee_id, salary FROM employees WHERE salary > 3000;\n"
+            "C: CREATE VIEW v_c AS SELECT employee_id, ROWNUM AS rn FROM employees;\n"
+            "D: CREATE VIEW v_d AS SELECT employee_id, last_name FROM employees ORDER BY last_name;"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "正解は A（DISTINCT を含む）と C（ROWNUM を含む）です。\n\n"
+            "更新不可となるVIEWの主な条件:\n"
+            "・DISTINCT を含む\n"
+            "・GROUP BY / HAVING 句を含む\n"
+            "・集合演算子（UNION, INTERSECT, MINUS）を含む\n"
+            "・集計関数（SUM, AVG, COUNT 等）を含む\n"
+            "・ROWNUM 疑似列を含む\n\n"
+            "B（WHERE 句のみ）: 単純なSELECTであり更新可能\n"
+            "D（ORDER BY のみ）: ORDER BY 単独は更新不可の条件に含まれない"
+        ),
+        "trap_reason": "ORDER BY を含むビューは更新不可と誤解するパターンが多い。ORDER BY 単独は更新可能条件を満たす。一方、ROWNUM は更新不可条件に含まれるため見落としやすい。",
+        "choices": [
+            {"choice_text": "A（DISTINCT を含むビュー）", "is_correct": True,  "display_order": 0},
+            {"choice_text": "B（WHERE 句のみのビュー）",  "is_correct": False, "display_order": 1},
+            {"choice_text": "C（ROWNUM を含むビュー）",   "is_correct": True,  "display_order": 2},
+            {"choice_text": "D（ORDER BY のみのビュー）", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 19. VIEW（1つ選べ・難易度1）WITH READ ONLY
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "VIEW",
+        "difficulty": 1,
+        "question_text": (
+            "以下のビュー定義に関する説明として正しいものを1つ選んでください。\n\n"
+            "CREATE VIEW v_readonly AS\n"
+            "  SELECT employee_id, first_name, salary\n"
+            "  FROM employees\n"
+            "WITH READ ONLY;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "WITH READ ONLY を指定したビューに対して INSERT / UPDATE / DELETE を実行しようとすると、\n"
+            "ORA-42399 エラーが発生し、DML 操作はすべて禁止されます。\n\n"
+            "SELECT（読み取り）は WITH READ ONLY でも通常どおり実行できます。\n\n"
+            "WITH READ ONLY と WITH CHECK OPTION の違い:\n"
+            "・WITH READ ONLY:    DML 操作を完全に禁止\n"
+            "・WITH CHECK OPTION: DML 操作は許可するが、ビューの WHERE 条件を満たさなくなる変更を禁止"
+        ),
+        "trap_reason": "WITH READ ONLYをWITH CHECK OPTIONと混同するパターン。READ ONLYはDMLを「完全禁止」、CHECK OPTIONはDML自体は許可して「条件違反だけを禁止」という違いを押さえること。",
+        "choices": [
+            {"choice_text": "ビューのWHERE条件を満たさない行のINSERTのみが禁止される",         "is_correct": False, "display_order": 0},
+            {"choice_text": "SELECTを含むすべての操作が禁止される",                            "is_correct": False, "display_order": 1},
+            {"choice_text": "INSERT / UPDATE / DELETE がすべて禁止され、SELECTは実行できる",   "is_correct": True,  "display_order": 2},
+            {"choice_text": "UPDATEのみが禁止され、INSERTとDELETEは実行できる",               "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 20. VIEW（2つ選べ・難易度2）WITH CHECK OPTION と WITH READ ONLY の違い
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "VIEW",
+        "difficulty": 2,
+        "question_text": (
+            "WITH CHECK OPTION と WITH READ ONLY に関する説明として正しいものを2つ選んでください。\n\n"
+            "-- ビュー定義例\n"
+            "CREATE VIEW v_check AS\n"
+            "  SELECT * FROM employees WHERE salary > 5000\n"
+            "WITH CHECK OPTION;\n\n"
+            "CREATE VIEW v_read AS\n"
+            "  SELECT * FROM employees WHERE salary > 5000\n"
+            "WITH READ ONLY;"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "WITH READ ONLY:\n"
+            "・INSERT / UPDATE / DELETE がすべて禁止される（ORA-42399）\n"
+            "・SELECT は通常どおり実行可能\n\n"
+            "WITH CHECK OPTION:\n"
+            "・INSERT / UPDATE / DELETE は実行可能\n"
+            "・ただし、操作後にビューの WHERE 条件を満たさなくなる INSERT / UPDATE はエラーになる\n"
+            "・DELETE はビューから行を取り除くだけで「条件を満たさない行を生成しない」ため常に許可\n\n"
+            "まとめ:\n"
+            "・v_check: DELETE は実行できる。salary=4000 の INSERT はエラー\n"
+            "・v_read:  DELETE はエラー。SELECT は可能"
+        ),
+        "trap_reason": "WITH CHECK OPTIONでDELETEが禁止されると誤解するパターンが多い。DELETEは行を消すだけでWHERE条件に違反する行を「作らない」ため、CHECK OPTIONの対象外。WITH READ ONLYがDMLを完全禁止する唯一のオプション。",
+        "choices": [
+            {"choice_text": "WITH READ ONLY ではSELECTは実行できる",                                "is_correct": True,  "display_order": 0},
+            {"choice_text": "WITH CHECK OPTION ではDELETEも禁止される",                            "is_correct": False, "display_order": 1},
+            {"choice_text": "WITH CHECK OPTION ではビューのWHERE条件を満たす行のDELETEは実行できる", "is_correct": True,  "display_order": 2},
+            {"choice_text": "WITH READ ONLY と WITH CHECK OPTION は同一の動作をする",               "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 21. VIEW（1つ選べ・難易度2・長文）NOT NULL列がビューに含まれない場合のINSERT
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "VIEW",
+        "difficulty": 2,
+        "question_text": (
+            "以下のテーブルとビューが存在するとき、ビュー経由のINSERTの動作として正しいものを1つ選んでください。\n\n"
+            "-- テーブル定義\n"
+            "CREATE TABLE products (\n"
+            "  product_id   NUMBER       PRIMARY KEY,\n"
+            "  product_name VARCHAR2(50) NOT NULL,\n"
+            "  price        NUMBER\n"
+            ");\n\n"
+            "-- ビュー定義（product_name 列を含まない）\n"
+            "CREATE VIEW v_products AS\n"
+            "  SELECT product_id, price FROM products;\n\n"
+            "-- INSERT文\n"
+            "INSERT INTO v_products (product_id, price) VALUES (1, 500);"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "ビューを通じたINSERTでは、ビューに含まれていない列にNULLが設定されます。\n"
+            "product_name は NOT NULL 制約があり DEFAULT も定義されていないため、\n"
+            "NULL を設定しようとしてエラーになります（ORA-01400）。\n\n"
+            "成功 / 失敗の判断基準:\n"
+            "・ビュー外の列が NULL 許容             → NULL が設定されINSERT成功\n"
+            "・ビュー外の列が NOT NULL かつ DEFAULT なし → NULL設定でエラー\n"
+            "・ビュー外の列が NOT NULL かつ DEFAULT あり → DEFAULT値が設定されINSERT成功\n\n"
+            "この例では price 列は NULL 許容のため問題なく、product_name の NOT NULL 制約がエラーの原因です。"
+        ),
+        "trap_reason": "「ビューに含まれない列はスキップされる」と思い込み成功すると誤解するパターン。実際はNULLが設定されようとし、NOT NULL制約があるとエラーになる。DEFAULTが設定されていれば成功する点が試験で問われやすい。",
+        "choices": [
+            {"choice_text": "product_name に NULL が設定され、INSERTが成功する",                     "is_correct": False, "display_order": 0},
+            {"choice_text": "product_name の NOT NULL 制約によりエラーになる",                      "is_correct": True,  "display_order": 1},
+            {"choice_text": "ビュー経由のINSERTは全列が揃っていない場合は常にエラーになる",          "is_correct": False, "display_order": 2},
+            {"choice_text": "price が NULL 許容のためINSERTは成功し、product_name は空文字列になる", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 22. VIEW（1つ選べ・難易度3・長文）SELECT * 後の ALTER TABLE ADD
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "VIEW",
+        "difficulty": 3,
+        "question_text": (
+            "次の操作を順番に実行しました。最後のSELECT文の結果として正しいものを1つ選んでください。\n\n"
+            "① CREATE TABLE t (col1 NUMBER, col2 VARCHAR2(10));\n"
+            "② CREATE VIEW v AS SELECT * FROM t;\n"
+            "③ INSERT INTO t VALUES (1, 'A');\n"
+            "④ ALTER TABLE t ADD (col3 DATE);\n"
+            "⑤ SELECT * FROM v;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "⑤の SELECT * FROM v; は col1 と col2 の2列のみを返します。col3 は含まれません。\n\n"
+            "理由:\n"
+            "Oracle では CREATE VIEW 時に SELECT * の「*」がその時点の列リストに展開されてビュー定義に保存されます。\n"
+            "ビュー v は「SELECT col1, col2 FROM t」として登録されており、\n"
+            "④の ALTER TABLE で col3 を追加してもビュー定義は更新されません。\n\n"
+            "col3 をビューに含めるには:\n"
+            "  CREATE OR REPLACE VIEW v AS SELECT * FROM t;\n"
+            "とビューを再定義する必要があります。\n\n"
+            "なお、ALTER TABLE で既存列が削除・型変更された場合はビューが INVALID になることがあります。"
+        ),
+        "trap_reason": "SELECT * は「テーブルの現在の全列」を常に返すと思い込むパターン。ビューのSELECT *はビュー作成時点の列定義に固定される。これを「ビューは静的な列リストを持つ」と覚えると正確。",
+        "choices": [
+            {"choice_text": "col1, col2, col3 の3列が返される（ALTER TABLEの変更がビューに自動反映される）", "is_correct": False, "display_order": 0},
+            {"choice_text": "col1, col2 の2列のみ返される（ビュー作成時点の列定義に固定されている）",        "is_correct": True,  "display_order": 1},
+            {"choice_text": "ビューが INVALID になるためエラーが発生し、SELECTは失敗する",                  "is_correct": False, "display_order": 2},
+            {"choice_text": "col3 のみが返される（最後に追加された列だけがSELECT *の対象になる）",          "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 23. VIEW（1つ選べ・難易度1）DROP VIEW の影響
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "VIEW",
+        "difficulty": 1,
+        "question_text": "DROP VIEW 文を実行した場合の動作として正しいものを1つ選んでください。",
+        "multi_select_count": 1,
+        "explanation": (
+            "DROP VIEW はビューオブジェクト（ビュー定義）のみを削除します。\n"
+            "ベーステーブルのデータや構造には一切影響しません。\n\n"
+            "DROP VIEW の影響範囲:\n"
+            "・ビュー定義がデータディクショナリから削除される\n"
+            "・そのビューに付与されていたオブジェクト権限（GRANT）も削除される\n"
+            "・そのビューを参照する他のビューは INVALID 状態になる\n\n"
+            "影響を受けないもの:\n"
+            "・ベーステーブルの行データ\n"
+            "・ベーステーブルのスキーマ（列・制約・インデックス）\n"
+            "・ベーステーブルに付与された権限"
+        ),
+        "trap_reason": "DROP VIEWでベーステーブルのデータも消えると誤解するパターン。ビューは「データを持たない仮想テーブル」であり、DROP VIEWはビュー定義（メタデータ）を削除するだけ。また、参照ビューが自動削除されない点も見落としやすい。",
+        "choices": [
+            {"choice_text": "ビュー定義とベーステーブルの行データが両方削除される",                  "is_correct": False, "display_order": 0},
+            {"choice_text": "ビュー定義のみが削除され、ベーステーブルのデータは影響を受けない",      "is_correct": True,  "display_order": 1},
+            {"choice_text": "ベーステーブルのデータのみが削除され、ビュー定義は残る",                "is_correct": False, "display_order": 2},
+            {"choice_text": "ビューを参照するすべてのビューも自動的に削除される（カスケード削除）",  "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 24. VIEW（2つ選べ・難易度3・長文）JOINビューのDML制限
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "VIEW",
+        "difficulty": 3,
+        "question_text": (
+            "以下のJOINビューに関する説明として正しいものを2つ選んでください。\n\n"
+            "CREATE TABLE dept (\n"
+            "  dept_id   NUMBER PRIMARY KEY,\n"
+            "  dept_name VARCHAR2(50)\n"
+            ");\n"
+            "CREATE TABLE emp (\n"
+            "  emp_id   NUMBER PRIMARY KEY,\n"
+            "  emp_name VARCHAR2(50),\n"
+            "  dept_id  NUMBER,\n"
+            "  salary   NUMBER\n"
+            ");\n"
+            "CREATE VIEW v_emp_dept AS\n"
+            "  SELECT e.emp_id, e.emp_name, e.salary, d.dept_name\n"
+            "  FROM emp e JOIN dept d ON e.dept_id = d.dept_id;"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "JOINビューのDML可否は「key-preserved テーブル」の概念で判断します。\n\n"
+            "key-preserved テーブル:\n"
+            "結合後も各行が元テーブルの一意な行に対応し、主キーの一意性が保たれるテーブル。\n\n"
+            "このビューでの判定:\n"
+            "・emp:  結合後も emp_id は一意 → key-preserved ✓\n"
+            "・dept: 複数の emp が同一 dept に属するため dept_id が結合結果で重複 → key-preserved でない\n\n"
+            "DML可否:\n"
+            "・emp.salary の UPDATE → 可（emp は key-preserved）\n"
+            "・dept.dept_name の UPDATE → 不可（dept は key-preserved でない）\n"
+            "・DELETE → emp が唯一の key-preserved テーブルのため実行可\n\n"
+            "「JOINビューはDML不可」という思い込みが最大のトラップです。"
+        ),
+        "trap_reason": "「JOINビューに対してはDML操作が一切できない」という誤解が多い。実際はkey-preservedテーブルの列に限りUPDATE/DELETEが可能。key-preservedかどうかは「結合後も主キーの一意性が保たれるか」で判断する。",
+        "choices": [
+            {"choice_text": "key-preserved テーブルの列はJOINビューを通じてUPDATEできる",                      "is_correct": True,  "display_order": 0},
+            {"choice_text": "JOINビューに対してはいかなるDML操作（UPDATE/DELETE）も実行できない",            "is_correct": False, "display_order": 1},
+            {"choice_text": "key-preserved テーブルとは結合後も各行が元テーブルの1行に対応するテーブルのこと",  "is_correct": True,  "display_order": 2},
+            {"choice_text": "dept テーブルの dept_name はこのビューを通じてUPDATEできる",                     "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 25. VIEW（2つ選べ・難易度2・長文）ビューを参照するビューの挙動
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "VIEW",
+        "difficulty": 2,
+        "question_text": (
+            "以下のビュー定義が存在するとき、DROP VIEW v_base を実行した後の動作として正しいものを2つ選んでください。\n\n"
+            "CREATE VIEW v_base AS\n"
+            "  SELECT employee_id, salary FROM employees WHERE department_id = 10;\n\n"
+            "CREATE VIEW v_top AS\n"
+            "  SELECT employee_id, salary FROM v_base WHERE salary > 5000;"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "DROP VIEW v_base を実行すると:\n\n"
+            "・v_top は INVALID 状態になるが、自動的に削除はされない\n"
+            "・v_top に対してSELECTを実行しようとすると、コンパイルエラーが発生する\n\n"
+            "その後 v_base を再作成（CREATE VIEW v_base ...）すると:\n"
+            "・v_top への初回アクセス時にOracleが自動再コンパイルを試みる\n"
+            "・再コンパイルが成功すれば v_top は再び VALID になる\n\n"
+            "ビューのカスケード削除はデフォルトでは行われません。\n"
+            "（DROP TABLE に CASCADE CONSTRAINTS オプションがある点と混同しないこと）"
+        ),
+        "trap_reason": "「ベースビューを削除すると参照ビューも自動削除される（カスケード）」という誤解が頻出。ビューの場合はINVALIDになるだけで削除されない。また、v_baseを再作成すれば v_top も再コンパイルで復活できる点を知らないケースも多い。",
+        "choices": [
+            {"choice_text": "v_top は INVALID 状態になるが削除はされない",                             "is_correct": True,  "display_order": 0},
+            {"choice_text": "v_top も自動的に削除される（カスケード削除）",                            "is_correct": False, "display_order": 1},
+            {"choice_text": "v_base を再作成すれば、v_top への初回アクセス時に自動再コンパイルされる",   "is_correct": True,  "display_order": 2},
+            {"choice_text": "v_top は v_base 削除後もVALID状態を維持し、SELECTを正常に実行できる",      "is_correct": False, "display_order": 3},
+        ],
+    },
+
 ]
