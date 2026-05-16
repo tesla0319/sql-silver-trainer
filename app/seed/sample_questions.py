@@ -2734,6 +2734,338 @@ SAMPLE_QUESTIONS = [
     },
 
     # ──────────────────────────────────────────────────────────────────
+    # 86. MERGE（単一選択・難易度1）MERGE文の必須構文要素
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "MERGE",
+        "difficulty": 1,
+        "question_text": (
+            "Oracle の MERGE 文を構成するキーワードのうち、必ず記述しなければならないものを1つ選んでください。"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "MERGE 文の基本構文は以下のとおりです。\n\n"
+            "MERGE INTO <ターゲット> [別名]\n"
+            "USING <ソース> [別名] ON (<結合条件>)\n"
+            "[WHEN MATCHED     THEN UPDATE ...]\n"
+            "[WHEN NOT MATCHED THEN INSERT ...]\n\n"
+            "必須要素: MERGE INTO / USING / ON\n"
+            "省略可能: WHEN MATCHED / WHEN NOT MATCHED（どちらか一方だけでも可）\n"
+            "オプション: DELETE WHERE（WHEN MATCHED の UPDATE に続けて記述）\n\n"
+            "USING 句を省略すると構文エラーになります。\n"
+            "WHEN MATCHED / WHEN NOT MATCHED は両方省略するとエラーになりますが、どちらか一方は省略できます。"
+        ),
+        "trap_reason": "「WHEN MATCHEDとWHEN NOT MATCHEDの両方が必須」と思い込みやすい。実際はどちらか一方でよく、省略可能。一方、USING句はソースを指定する必須要素であり省略できない。",
+        "choices": [
+            {"choice_text": "WHEN MATCHED（一致行が必ずあるため必須）",                       "is_correct": False, "display_order": 0},
+            {"choice_text": "WHEN NOT MATCHED（未一致行が必ずあるため必須）",                  "is_correct": False, "display_order": 1},
+            {"choice_text": "USING（ソースを指定する構文上の必須キーワード）",                  "is_correct": True,  "display_order": 2},
+            {"choice_text": "DELETE WHERE（既存行を削除する条件として必須）",                   "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 87. MERGE（単一選択・難易度1）UPDATEのみのMERGE
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "MERGE",
+        "difficulty": 1,
+        "question_text": (
+            "次の MERGE 文を実行したとき、どのような動作になるか正しいものを1つ選んでください。\n\n"
+            "MERGE INTO employees e\n"
+            "USING new_salaries ns ON (e.employee_id = ns.employee_id)\n"
+            "WHEN MATCHED THEN\n"
+            "  UPDATE SET e.salary = ns.salary;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "WHEN MATCHED THEN UPDATE のみを記述した MERGE 文は合法であり、エラーにはなりません。\n\n"
+            "動作:\n"
+            "・ON 条件（e.employee_id = ns.employee_id）に一致する行 → salary を更新\n"
+            "・ON 条件に一致しないソース行 → 何もしない（INSERT は発生しない）\n\n"
+            "WHEN NOT MATCHED 句を省略しているため、ターゲットに存在しない新規社員はINSERTされません。\n"
+            "「UPDATEのみ MERGE」は、既存レコードの一括更新を1文でまとめたいときに使います。"
+        ),
+        "trap_reason": "「WHEN NOT MATCHEDがないとエラー」と思い込むパターン。OracleではWHEN MATCHEDだけ（またはWHEN NOT MATCHEDだけ）の片方省略MERGEは有効。ソースにのみ存在する行は何もされないことも見落とされやすい。",
+        "choices": [
+            {"choice_text": "WHEN NOT MATCHED 句がないため SQL 文法エラーになる",                              "is_correct": False, "display_order": 0},
+            {"choice_text": "ON 条件に一致する行は UPDATE され、一致しないソース行には何もされない",            "is_correct": True,  "display_order": 1},
+            {"choice_text": "ON 条件に一致しないソース行は自動的に INSERT される",                             "is_correct": False, "display_order": 2},
+            {"choice_text": "WHEN MATCHED のみの MERGE は UPDATE ではなく SELECT を実行する",                  "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 88. MERGE（単一選択・難易度2）INSERTのみのMERGE
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "MERGE",
+        "difficulty": 2,
+        "question_text": (
+            "次の MERGE 文を実行したとき、どのような動作になるか正しいものを1つ選んでください。\n\n"
+            "MERGE INTO products p\n"
+            "USING new_products np ON (p.product_id = np.product_id)\n"
+            "WHEN NOT MATCHED THEN\n"
+            "  INSERT (product_id, product_name)\n"
+            "  VALUES (np.product_id, np.product_name);"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "WHEN NOT MATCHED THEN INSERT のみを記述した MERGE 文は合法であり、エラーにはなりません。\n\n"
+            "動作:\n"
+            "・ON 条件に一致しないソース行（products に存在しない new_products）→ INSERT される\n"
+            "・ON 条件に一致するターゲット行（既に存在する products）→ 何もされない\n\n"
+            "「INSERTのみ MERGE」は、重複を無視しながら新規レコードだけを追加したい場合に使います。\n"
+            "WHEN MATCHED 句を省略しているため、既存商品の上書き更新は発生しません。"
+        ),
+        "trap_reason": "「WHEN MATCHEDがないとデフォルトでUPDATEが実行される」という誤解が多い。省略したWHEN MATCHED句は存在しないと同じで、一致行はスキップされる。また「一致行が削除される」という誤解も見られる。",
+        "choices": [
+            {"choice_text": "ON 条件に一致しないソース行だけが INSERT され、一致する既存行には何もされない",     "is_correct": True,  "display_order": 0},
+            {"choice_text": "ON 条件に一致する既存行は DELETE される（MATCHED 句省略時のデフォルト動作）",       "is_correct": False, "display_order": 1},
+            {"choice_text": "WHEN MATCHED 句がないため SQL 文法エラーになる",                                  "is_correct": False, "display_order": 2},
+            {"choice_text": "ON 条件に一致する既存行はデフォルトで UPDATE される",                              "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 89. MERGE（単一選択・難易度2）MERGE実行結果の読み取り
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "MERGE",
+        "difficulty": 2,
+        "question_text": (
+            "下記のテーブルと MERGE 文を見て、実行後の target テーブルの状態として正しいものを1つ選んでください。\n\n"
+            "【target テーブル（実行前）】\n"
+            "id | name\n"
+            "---+-------\n"
+            " 1 | Alice\n"
+            " 2 | Bob\n\n"
+            "【source テーブル】\n"
+            "id | name\n"
+            "---+--------\n"
+            " 2 | Bobby\n"
+            " 3 | Carol\n\n"
+            "MERGE INTO target t\n"
+            "USING source s ON (t.id = s.id)\n"
+            "WHEN MATCHED     THEN UPDATE SET t.name = s.name\n"
+            "WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name);"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "ON 条件（t.id = s.id）による照合結果:\n\n"
+            "・source の id=2 → target の id=2（Bob）と一致 → WHEN MATCHED: name を 'Bobby' に UPDATE\n"
+            "・source の id=3 → target に id=3 は存在しない → WHEN NOT MATCHED: id=3, 'Carol' を INSERT\n"
+            "・target の id=1（Alice）はソースに対応する行がないため、何もされずそのまま残る\n\n"
+            "実行後の target テーブル:\n"
+            "id=1: Alice（変更なし）\n"
+            "id=2: Bobby（Bobから更新）\n"
+            "id=3: Carol（新規追加）"
+        ),
+        "trap_reason": "「ソースに存在しないターゲット行（id=1: Alice）も削除される」という誤解が最も多い。MERGE文はソースを軸に処理を行い、ソースに対応がないターゲット行は手付かずのまま残る。",
+        "choices": [
+            {"choice_text": "id=1:Alice / id=2:Bob / id=3:Carol（id=2は更新されない）",      "is_correct": False, "display_order": 0},
+            {"choice_text": "id=1:Alice / id=2:Bobby / id=3:Carol",                          "is_correct": True,  "display_order": 1},
+            {"choice_text": "id=2:Bobby / id=3:Carol（id=1:Aliceは削除される）",              "is_correct": False, "display_order": 2},
+            {"choice_text": "id=1:Alice / id=2:Bobby（id=3:Carolは追加されない）",            "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 90. MERGE（単一選択・難易度2）MERGEと通常UPDATEの違い
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "MERGE",
+        "difficulty": 2,
+        "question_text": (
+            "MERGE 文と通常の UPDATE 文の違いに関する説明として正しいものを1つ選んでください。"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "MERGE 文の主な特徴（UPDATE 文との違い）:\n\n"
+            "1. UPSERT の実現\n"
+            "   MERGE は1文でターゲットに一致する行の UPDATE と一致しない行の INSERT を同時に実行できます。\n"
+            "   UPDATE 文は既存行の更新のみで、存在しない行への INSERT はできません。\n\n"
+            "2. USING 句でソースを指定\n"
+            "   MERGE はソーステーブルまたはサブクエリと JOIN のような比較ができます。\n"
+            "   UPDATE 文もサブクエリで参照先を指定できますが、INSERT を同時には行えません。\n\n"
+            "3. コミット動作は同じ\n"
+            "   どちらも自動コミットは行われません（明示的なCOMMITが必要）。"
+        ),
+        "trap_reason": "「MERGEはCOMMITを自動実行する」という誤解が多い。OracleのDML（UPDATE/INSERT/DELETE/MERGE）はすべて自動コミットされない。また「UPDATE文ではサブクエリを使った更新は不可」という誤解も見られるが、UPDATE文もサブクエリ参照は可能。",
+        "choices": [
+            {"choice_text": "MERGE 文は実行後に自動で COMMIT が行われるが、UPDATE 文は行われない",                    "is_correct": False, "display_order": 0},
+            {"choice_text": "MERGE 文は1文でUPDATEとINSERTを条件によって使い分けられるが、UPDATE 文は更新のみ",        "is_correct": True,  "display_order": 1},
+            {"choice_text": "UPDATE 文はサブクエリを使った更新が不可だが、MERGE 文は使用できる",                       "is_correct": False, "display_order": 2},
+            {"choice_text": "MERGE 文は WHERE 句を記述できないが、UPDATE 文は WHERE 句で対象行を絞り込める",           "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 91. MERGE（単一選択・難易度2）ON句とNULL
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "MERGE",
+        "difficulty": 2,
+        "question_text": (
+            "MERGE 文の ON 句に関する説明として正しいものを1つ選んでください。"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "MERGE 文の ON 句は、ソースとターゲットを照合するための結合条件を指定します。\n\n"
+            "重要なポイント:\n\n"
+            "1. NULL の扱い\n"
+            "   ON 句で使用する列に NULL が含まれる場合、NULL = NULL は偽（UNKNOWN）となります。\n"
+            "   NULL 同士は一致しないため、ON 条件が常に不成立になり WHEN NOT MATCHED 側が実行されます。\n\n"
+            "2. 等号以外も使用可能\n"
+            "   ON 句には =（等号）以外にも <、>、BETWEEN などの条件も記述できます。\n\n"
+            "3. 複数条件の結合\n"
+            "   ON (t.col1 = s.col1 AND t.col2 = s.col2) のように AND で複合キーを指定できます。"
+        ),
+        "trap_reason": "「ON句に等号（=）しか使えない」という誤解が試験に出やすい。また「NULLはNULLと一致する」という誤解も多く、NULL同士の比較はUNKNOWN（偽）となるため一致行とみなされない点に注意。",
+        "choices": [
+            {"choice_text": "ON 句は MERGE INTO 句で指定したテーブルの絞り込み条件で JOIN とは無関係",          "is_correct": False, "display_order": 0},
+            {"choice_text": "ON 句の結合列に NULL が含まれる場合、NULL = NULL は偽となり一致しない",             "is_correct": True,  "display_order": 1},
+            {"choice_text": "ON 句には必ず等号（=）のみを使用しなければならない",                               "is_correct": False, "display_order": 2},
+            {"choice_text": "ON 条件に一致した行は WHEN MATCHED で INSERT される",                              "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 92. MERGE（単一選択・難易度3）DELETE WHERE句の動作
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "MERGE",
+        "difficulty": 3,
+        "question_text": (
+            "次の MERGE 文における DELETE WHERE 句の動作として正しいものを1つ選んでください。\n\n"
+            "MERGE INTO orders o\n"
+            "USING order_updates ou ON (o.order_id = ou.order_id)\n"
+            "WHEN MATCHED THEN\n"
+            "  UPDATE SET o.status = ou.status\n"
+            "  DELETE WHERE (o.status = 'CANCELLED');"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "MERGE 文の DELETE WHERE 句は、WHEN MATCHED THEN UPDATE の後に記述する Oracle 固有の拡張機能です。\n\n"
+            "動作の順序:\n"
+            "1. ON 条件で一致した行を特定する\n"
+            "2. WHEN MATCHED の UPDATE を実行する（o.status = ou.status に更新）\n"
+            "3. UPDATE 後の行に対して DELETE WHERE 条件を評価する\n"
+            "4. UPDATE 後の o.status = 'CANCELLED' であれば、その行を DELETE する\n\n"
+            "重要: DELETE WHERE は UPDATE 実行後の値で評価されます。\n"
+            "更新前の値ではなく、更新後の値が 'CANCELLED' の場合に削除されます。\n\n"
+            "また DELETE WHERE はソーステーブル（order_updates）の行を削除するのではなく、\n"
+            "ターゲットテーブル（orders）の行を削除します。"
+        ),
+        "trap_reason": "「DELETE WHEREはUPDATE実行前の元の値で評価される」という誤解が最頻出。正しくはUPDATE後の値で評価される。また「ソーステーブルの行を削除する」という誤解や「MERGE文ではDELETE WHEREは使えない」という誤解も見られる。",
+        "choices": [
+            {"choice_text": "DELETE WHERE は UPDATE 実行前のターゲット行の元の値で評価される",                   "is_correct": False, "display_order": 0},
+            {"choice_text": "DELETE WHERE は UPDATE 実行後の値で評価され、条件を満たす行はターゲットから削除される", "is_correct": True,  "display_order": 1},
+            {"choice_text": "DELETE WHERE はソーステーブル（order_updates）の行を削除する",                      "is_correct": False, "display_order": 2},
+            {"choice_text": "MERGE 文では DELETE WHERE は使用できず、記述すると構文エラーになる",                 "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 93. MERGE（単一選択・難易度3）WHEN MATCHED内のWHERE句
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "MERGE",
+        "difficulty": 3,
+        "question_text": (
+            "次の MERGE 文における WHERE 句の役割として正しいものを1つ選んでください。\n\n"
+            "MERGE INTO inventory i\n"
+            "USING stock_update su ON (i.item_id = su.item_id)\n"
+            "WHEN MATCHED THEN\n"
+            "  UPDATE SET i.quantity = su.quantity\n"
+            "  WHERE su.quantity > 0;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "MERGE 文の WHEN MATCHED THEN UPDATE 句には WHERE 句を付けることができます（Oracle 10g 以降）。\n\n"
+            "WHERE 句の役割:\n"
+            "・ON 条件で一致した行のうち、さらに WHERE 条件を満たす行のみ UPDATE する\n"
+            "・WHERE 条件を満たさない一致行は UPDATE をスキップする（INSERT も行われない）\n\n"
+            "この例の動作:\n"
+            "・ON 条件（i.item_id = su.item_id）で一致 かつ su.quantity > 0 → UPDATE 実行\n"
+            "・ON 条件で一致 かつ su.quantity <= 0 → UPDATE スキップ（行はそのまま残る）\n\n"
+            "同様に WHEN NOT MATCHED THEN INSERT にも WHERE 句を付けて挿入対象を絞り込めます。"
+        ),
+        "trap_reason": "「WHERE条件を満たさない一致行はINSERTされる」という誤解が最も多い。WHERE条件不成立の行はUPDATEをスキップするだけで、INSERT対象にはならない。また「MERGE文にWHERE句は書けない」という誤解も試験に出やすい。",
+        "choices": [
+            {"choice_text": "WHERE 条件（su.quantity > 0）を満たさない一致行は WHEN NOT MATCHED 側の INSERT が実行される", "is_correct": False, "display_order": 0},
+            {"choice_text": "WHERE 条件を満たさない一致行は UPDATE をスキップし、何もされない",                             "is_correct": True,  "display_order": 1},
+            {"choice_text": "MERGE 文の WHEN MATCHED 句に WHERE 句を記述すると構文エラーになる",                           "is_correct": False, "display_order": 2},
+            {"choice_text": "WHERE 句は ON 句と同じ役割を持ち、結合条件を補強する",                                        "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 94. MERGE（2つ選べ・難易度3）MERGEの正しい仕様
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "MERGE",
+        "difficulty": 3,
+        "question_text": (
+            "Oracle の MERGE 文に関する説明として正しいものを2つ選んでください。"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "Oracle MERGE 文の仕様:\n\n"
+            "【正しい記述】\n"
+            "・USING 句にはテーブル名だけでなく、サブクエリも指定できます。\n"
+            "  例: USING (SELECT id, name FROM src WHERE active = 1) s ON (...)\n\n"
+            "・WHEN NOT MATCHED THEN INSERT 句にも WHERE 句を付けて挿入対象を絞り込めます。\n"
+            "  例: WHEN NOT MATCHED THEN INSERT (...) VALUES (...) WHERE su.qty > 0\n\n"
+            "【誤った記述】\n"
+            "・WHEN MATCHED 句には UPDATE の他に DELETE WHERE も記述可能（DELETEのみ不可だが両方は可）\n"
+            "・MERGE 文は DML（データ操作言語）であり、DDL ではありません\n"
+            "・MERGE 文は自動コミットしません（明示的な COMMIT が必要）"
+        ),
+        "trap_reason": "「USING句にはテーブル名しか指定できない」という誤解が多い。サブクエリも指定可能で、条件で絞り込んだ結果セットをソースにできる。また「WHEN NOT MATCHEDにWHERE句は書けない」という誤解も頻出。",
+        "choices": [
+            {"choice_text": "WHEN MATCHED 句には UPDATE のみ記述でき、DELETE は記述できない",                   "is_correct": False, "display_order": 0},
+            {"choice_text": "WHEN NOT MATCHED THEN INSERT 句に WHERE 条件を付けて挿入対象を絞り込める",          "is_correct": True,  "display_order": 1},
+            {"choice_text": "USING 句にはテーブル名だけでなくサブクエリも指定できる",                            "is_correct": True,  "display_order": 2},
+            {"choice_text": "MERGE 文は DDL に分類されるため、暗黙的な COMMIT が行われる",                       "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 95. MERGE（2つ選べ・難易度3）ON句の設計ミスによるリスク
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "MERGE",
+        "difficulty": 3,
+        "question_text": (
+            "Oracle の MERGE 文において ON 句を誤って設計した場合に起こりうる問題として正しいものを2つ選んでください。"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "MERGE 文の ON 句設計ミスによる代表的な問題:\n\n"
+            "1. ソースの複数行が同一ターゲット行に一致する場合\n"
+            "   ソーステーブルの複数行が ON 条件でターゲットの同一行に一致すると、\n"
+            "   同一行に対して複数回 UPDATE が試みられます。\n"
+            "   Oracle はこの状態を検出すると ORA-30926 エラーを発生させます。\n"
+            "   （「安定した行セットを取得できません」というエラー）\n\n"
+            "2. ON 条件が常に真になる場合\n"
+            "   ON 句の条件式が常に真（例: ON (1 = 1)）になると、\n"
+            "   ターゲットのすべての行が WHEN MATCHED 側として扱われます。\n"
+            "   意図せず全件 UPDATE や全件 DELETE が発生する危険があります。\n\n"
+            "【誤解されやすい点】\n"
+            "・インデックス列を ON 句に使わなくても MERGE は実行できます（パフォーマンスは落ちる）\n"
+            "・ON 句でソーステーブルの列も参照できます"
+        ),
+        "trap_reason": "「ORA-30926はORACLE固有のエラーで、ソースに重複行があると発生する」という事実を知らないことが多い。ON条件の設計ミスは実運用でも頻発するバグの原因であり、試験でも問われやすい。",
+        "choices": [
+            {"choice_text": "ON 条件が常に真になると、ターゲットの全行が WHEN MATCHED として処理され意図しない全件更新が起こりうる",       "is_correct": True,  "display_order": 0},
+            {"choice_text": "ソースの複数行がターゲットの同一行に一致すると ORA-30926 エラーが発生する",                                 "is_correct": True,  "display_order": 1},
+            {"choice_text": "ON 句にインデックス列を使わないと MERGE 文は必ず実行時エラーになる",                                        "is_correct": False, "display_order": 2},
+            {"choice_text": "ON 句で参照できるのはターゲットテーブルの列のみで、ソーステーブルの列は参照できない",                         "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
     # 85. DATA_DICTIONARY（2つ選べ・難易度3）USER_SOURCE の対象オブジェクト
     # ──────────────────────────────────────────────────────────────────
     {
