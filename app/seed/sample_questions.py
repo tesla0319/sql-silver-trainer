@@ -1780,4 +1780,354 @@ SAMPLE_QUESTIONS = [
         ],
     },
 
+    # ──────────────────────────────────────────────────────────────────
+    # 56. CORRELATED_SUBQUERY（1つ選べ・難易度1）相関副問い合わせの基本概念
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CORRELATED_SUBQUERY",
+        "difficulty": 1,
+        "question_text": "相関副問い合わせ（Correlated Subquery）と通常の副問い合わせの違いとして正しいものを1つ選んでください。",
+        "multi_select_count": 1,
+        "explanation": (
+            "相関副問い合わせは「外側クエリの列を内側クエリが参照している」副問い合わせです。\n\n"
+            "通常の副問い合わせ:\n"
+            "・外側クエリから独立して1回だけ実行される\n"
+            "・結果はキャッシュされて外側クエリ全体で再利用される\n"
+            "例: WHERE salary = (SELECT MAX(salary) FROM employees)\n\n"
+            "相関副問い合わせ:\n"
+            "・外側クエリの各行を処理するたびに1回ずつ実行される\n"
+            "・外側クエリの現在の行の列値を参照する\n"
+            "例: WHERE salary > (SELECT AVG(salary) FROM employees e2 WHERE e2.dept_id = e1.dept_id)\n"
+            "  → dept_id が e1（外側）の現在行に依存するため相関副問い合わせ"
+        ),
+        "trap_reason": "「副問い合わせはすべて先に1回実行される」という誤解が多い。相関副問い合わせは外側クエリの列を参照するため、外側の行ごとに毎回実行される。通常の副問い合わせとは実行タイミングが根本的に異なる。",
+        "choices": [
+            {"choice_text": "相関副問い合わせはSELECT句にのみ使用でき、WHERE句では使用できない",                  "is_correct": False, "display_order": 0},
+            {"choice_text": "相関副問い合わせは外側クエリの列を参照し、外側の各行ごとに1回ずつ評価される",         "is_correct": True,  "display_order": 1},
+            {"choice_text": "相関副問い合わせは通常の副問い合わせと同様に1回だけ実行されて結果が再利用される",      "is_correct": False, "display_order": 2},
+            {"choice_text": "相関副問い合わせは集計関数（SUM, AVG等）と組み合わせて使用することができない",         "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 57. CORRELATED_SUBQUERY（1つ選べ・難易度1）EXISTSの動作
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CORRELATED_SUBQUERY",
+        "difficulty": 1,
+        "question_text": (
+            "以下のSQL文の動作として正しいものを1つ選んでください。\n\n"
+            "SELECT e.emp_name\n"
+            "FROM employees e\n"
+            "WHERE EXISTS (\n"
+            "  SELECT 1 FROM orders o WHERE o.emp_id = e.emp_id\n"
+            ");"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "EXISTS は、サブクエリが1行以上の行を返す場合に TRUE となります。\n\n"
+            "このクエリの動作:\n"
+            "・外側クエリの各 employee に対してサブクエリを実行\n"
+            "・その employee の emp_id が orders に1件でも存在すれば EXISTS → TRUE\n"
+            "・結果: orders テーブルに少なくとも1件の注文がある従業員の emp_name が返される\n\n"
+            "重要なポイント:\n"
+            "・EXISTS はサブクエリが返す値（SELECT 1 でも SELECT * でも）に関係なく、\n"
+            "  行が存在するかどうかだけを判定する\n"
+            "・最初の一致行が見つかった時点でサブクエリの評価を中断する（効率的）"
+        ),
+        "trap_reason": "「SELECT 1 は値1を返すだけでフィルタリングに使えない」と思い込むパターン。EXISTSはサブクエリが返す値の中身には関心がなく、行が1行でも存在するかどうかのみを判定する。",
+        "choices": [
+            {"choice_text": "サブクエリが正確に1行を返すemployeeのemp_nameが返される",              "is_correct": False, "display_order": 0},
+            {"choice_text": "ordersテーブルに少なくとも1件の注文があるemployeeのemp_nameが返される", "is_correct": True,  "display_order": 1},
+            {"choice_text": "SELECT 1は値1を返すため、emp_idが1のemployeeのemp_nameが返される",    "is_correct": False, "display_order": 2},
+            {"choice_text": "EXISTSはINと同等の動作をするため、orders.emp_idに等しいemployeeが返される", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 58. CORRELATED_SUBQUERY（1つ選べ・難易度2）NOT EXISTSの動作
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CORRELATED_SUBQUERY",
+        "difficulty": 2,
+        "question_text": (
+            "以下のSQL文が返す部署として正しいものを1つ選んでください。\n\n"
+            "SELECT d.dept_name\n"
+            "FROM departments d\n"
+            "WHERE NOT EXISTS (\n"
+            "  SELECT 1 FROM employees e WHERE e.dept_id = d.dept_id\n"
+            ");"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "NOT EXISTS は、サブクエリが1行も返さない場合に TRUE となります。\n\n"
+            "このクエリの動作:\n"
+            "・各 department に対して、その部署に所属する employee を検索\n"
+            "・1人も employee が存在しない場合 → NOT EXISTS → TRUE\n"
+            "・結果: 従業員が1人も所属していない部署の dept_name が返される\n\n"
+            "用途: 「片方のテーブルに存在しないデータを取得する」パターンで頻繁に使用されます。\n"
+            "NOT IN と違い、NULLが混在しても正しく動作する点がメリットです。"
+        ),
+        "trap_reason": "NOT EXISTSをEXISTSと逆に理解するパターン。NOT EXISTSは「サブクエリが0行」のときTRUE。つまり「対応するデータが存在しない行」を取得するときに使う。EXISTSとNOT EXISTSの返す行の集合は正反対になる。",
+        "choices": [
+            {"choice_text": "少なくとも1人の従業員が所属している部署",                  "is_correct": False, "display_order": 0},
+            {"choice_text": "1人も従業員が所属していない部署",                          "is_correct": True,  "display_order": 1},
+            {"choice_text": "すべての部署（NOT EXISTSは常にTRUEになる）",               "is_correct": False, "display_order": 2},
+            {"choice_text": "employeesテーブルとdepartmentsテーブルの両方に存在する部署", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 59. CORRELATED_SUBQUERY（2つ選べ・難易度2）IN と EXISTS の違い
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CORRELATED_SUBQUERY",
+        "difficulty": 2,
+        "question_text": "WHERE句で使う IN と EXISTS の違いとして正しいものを2つ選んでください。",
+        "multi_select_count": 2,
+        "explanation": (
+            "IN と EXISTS の主な違い:\n\n"
+            "① 評価の仕組み:\n"
+            "・IN:     サブクエリの全結果を取得してリストを作成し、外側の値がリストに含まれるか比較する\n"
+            "・EXISTS: サブクエリが1行でも返せばTRUE。最初の一致で評価を中断する\n\n"
+            "② NULL値の扱い:\n"
+            "・IN:     サブクエリにNULLが含まれると NOT IN が空の結果を返すことがある（重大な落とし穴）\n"
+            "・EXISTS: サブクエリの結果に関わらず行の存在/非存在だけを判定するためNULLの影響を受けない\n\n"
+            "③ パフォーマンス:\n"
+            "・一般的にEXISTSは大きなサブクエリに対して効率的だが、\n"
+            "  Oracleのオプティマイザが自動的に最適化するため常にEXISTSが速いとは限らない"
+        ),
+        "trap_reason": "「INとEXISTSは同じ結果を返す代替構文」という誤解が多い。NULL値が絡む NOT IN は特に危険で、サブクエリに1件でもNULLがあると0行が返ってしまう。NOT EXISTSならNULLがあっても正しく動作する。",
+        "choices": [
+            {"choice_text": "EXISTSはサブクエリが1行でも返せばTRUEとなり、INはすべての値とリスト比較を行う",     "is_correct": True,  "display_order": 0},
+            {"choice_text": "NOT INはサブクエリにNULL値が含まれると空の結果を返す場合があるが、NOT EXISTSはNULLの影響を受けない", "is_correct": True, "display_order": 1},
+            {"choice_text": "EXISTSはINより常に高速に実行されるため、INは使うべきではない",                    "is_correct": False, "display_order": 2},
+            {"choice_text": "INはWHERE句のみで使用できるが、EXISTSはHAVING句でのみ使用できる",               "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 60. CORRELATED_SUBQUERY（1つ選べ・難易度2）NOT IN と NULL
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CORRELATED_SUBQUERY",
+        "difficulty": 2,
+        "question_text": (
+            "departments.dept_id 列に NULL を含む行が存在するとき、以下のSQL文の実行結果として\n"
+            "正しいものを1つ選んでください。\n\n"
+            "SELECT emp_name FROM employees\n"
+            "WHERE dept_id NOT IN (SELECT dept_id FROM departments);"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "NOT IN のサブクエリにNULLが含まれると、結果は0行（空の結果）になります。\n\n"
+            "理由:\n"
+            "SELECT dept_id FROM departments が (10, 20, NULL) を返すとすると:\n"
+            "dept_id NOT IN (10, 20, NULL)\n"
+            "→ dept_id != 10 AND dept_id != 20 AND dept_id != NULL\n"
+            "→ dept_id != NULL は NULL（UNKNOWN）と評価される\n"
+            "→ TRUE AND TRUE AND UNKNOWN → UNKNOWN → 行は除外される\n\n"
+            "全行でUNKNOWNが発生するため、どの行も返されません。\n\n"
+            "対策: NOT EXISTS を使うか、サブクエリにWHERE dept_id IS NOT NULL を追加する:\n"
+            "WHERE dept_id NOT IN (SELECT dept_id FROM departments WHERE dept_id IS NOT NULL)"
+        ),
+        "trap_reason": "「NULLはNOT INで自動的に除外される」という誤解が非常に多い。SQLの3値論理では値とNULLの比較はUNKNOWNになり、NOT INの条件がUNKNOWNになった行はすべて除外される。結果として0行が返る。これは最もよくある副問い合わせのバグのひとつ。",
+        "choices": [
+            {"choice_text": "NULLの行は自動的に除外されて、一致しないemp_nameが返される",                     "is_correct": False, "display_order": 0},
+            {"choice_text": "サブクエリにNULLが含まれるため、0行（空の結果）が返される",                       "is_correct": True,  "display_order": 1},
+            {"choice_text": "ORA-01427: 単一行副問い合わせが複数行を返しましたというエラーが発生する",          "is_correct": False, "display_order": 2},
+            {"choice_text": "NULLはINの比較で無視されるため、NULLを除いたdept_idと不一致の行が返される",        "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 61. CORRELATED_SUBQUERY（1つ選べ・難易度2・長文）相関副問い合わせの評価順序
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CORRELATED_SUBQUERY",
+        "difficulty": 2,
+        "question_text": (
+            "以下のSQL文のサブクエリの評価に関する正しい記述を1つ選んでください。\n\n"
+            "SELECT e.emp_name, e.salary\n"
+            "FROM employees e\n"
+            "WHERE e.salary > (\n"
+            "  SELECT AVG(salary)\n"
+            "  FROM employees\n"
+            "  WHERE dept_id = e.dept_id\n"
+            ");"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "このサブクエリは e.dept_id（外側クエリの列）を参照しているため相関副問い合わせです。\n\n"
+            "評価の流れ:\n"
+            "① 外側クエリが employees の1行目を取得（例: dept_id=10 の従業員）\n"
+            "② サブクエリが実行される: SELECT AVG(salary) FROM employees WHERE dept_id = 10\n"
+            "③ 外側クエリで salary > (dept_id=10の平均) を判定\n"
+            "④ 次の行（例: dept_id=20）に移り、再びサブクエリが実行される\n"
+            "⑤ これを全行に対して繰り返す\n\n"
+            "つまり、サブクエリは外側クエリの行数分だけ実行されます。\n"
+            "（通常の副問い合わせは1回しか実行されない点が大きな違い）"
+        ),
+        "trap_reason": "「副問い合わせは先に1回だけ実行される」という誤解が多い。このSQL文のサブクエリはe.dept_idという外側列を参照しているため相関副問い合わせであり、外側クエリの各行に対して毎回実行される。全社平均ではなく部署ごとの平均が計算されている点も重要。",
+        "choices": [
+            {"choice_text": "サブクエリは一度だけ実行され、全社の平均給与が計算されて外側クエリで再利用される",   "is_correct": False, "display_order": 0},
+            {"choice_text": "サブクエリはemployeesの各行に対して1回ずつ実行され、その行の部署の平均給与が計算される", "is_correct": True, "display_order": 1},
+            {"choice_text": "サブクエリはemployeesの全行のAVGを先に計算してから、外側クエリが実行される",        "is_correct": False, "display_order": 2},
+            {"choice_text": "相関副問い合わせはWHERE句では使用できないためエラーになる",                       "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 62. CORRELATED_SUBQUERY（1つ選べ・難易度2・長文）UPDATE + 相関副問い合わせ
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CORRELATED_SUBQUERY",
+        "difficulty": 2,
+        "question_text": (
+            "以下のUPDATE文の動作として正しいものを1つ選んでください。\n\n"
+            "UPDATE employees e\n"
+            "SET e.salary = e.salary * 1.1\n"
+            "WHERE EXISTS (\n"
+            "  SELECT 1 FROM dept_bonuses db\n"
+            "  WHERE db.dept_id = e.dept_id\n"
+            "  AND db.bonus_year = 2024\n"
+            ");"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "このUPDATE文は、相関副問い合わせのEXISTSを使って更新対象を絞り込んでいます。\n\n"
+            "動作:\n"
+            "① employees の各行に対してサブクエリを実行\n"
+            "② その従業員の dept_id が dept_bonuses に bonus_year=2024 で存在すれば\n"
+            "   EXISTS → TRUE → salary を10%増加\n"
+            "③ 一致しない従業員は更新されない\n\n"
+            "この書き方のポイント:\n"
+            "・EXISTS は1件でも一致すれば更新対象になる\n"
+            "・dept_bonuses に同じ dept_id で複数行あっても、EXISTS は最初の一致で止まるため\n"
+            "  同じ従業員が複数回更新されることはない"
+        ),
+        "trap_reason": "「EXISTSに一致するのがdept_bonusesの行なのでdept_bonusesのsalaryが更新される」という誤解が多い。UPDATEの対象はあくまでFROM句（ここではemployees）の行。EXISTSは更新対象行を絞り込む条件として機能する。",
+        "choices": [
+            {"choice_text": "dept_bonusesテーブルのすべての行のsalaryが10%増加する",                          "is_correct": False, "display_order": 0},
+            {"choice_text": "2024年のボーナス対象部署に所属するemployeesの給与が10%増加する",                  "is_correct": True,  "display_order": 1},
+            {"choice_text": "dept_bonusesに複数の一致行がある場合、同じ従業員のsalaryが複数回増加する",         "is_correct": False, "display_order": 2},
+            {"choice_text": "SELECT 1をサブクエリで使用しているため、更新する値が1になる",                     "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 63. CORRELATED_SUBQUERY（1つ選べ・難易度2・長文）DELETE + 相関副問い合わせ
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CORRELATED_SUBQUERY",
+        "difficulty": 2,
+        "question_text": (
+            "以下のDELETE文が削除する行を正しく説明したものを1つ選んでください。\n\n"
+            "DELETE FROM orders o\n"
+            "WHERE NOT EXISTS (\n"
+            "  SELECT 1 FROM customers c\n"
+            "  WHERE c.customer_id = o.customer_id\n"
+            ");"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "NOT EXISTS は「サブクエリが0行を返す場合」にTRUEとなります。\n\n"
+            "このDELETEの動作:\n"
+            "① orders の各行に対してサブクエリを実行\n"
+            "② その orders.customer_id が customers テーブルに存在しない場合\n"
+            "   → NOT EXISTS → TRUE → その orders 行を削除\n"
+            "③ customers に対応するレコードがある orders 行は削除されない\n\n"
+            "この処理の用途:\n"
+            "「孤立したデータ（参照先が存在しない行）の削除」によく使われます。\n"
+            "例: 顧客が削除されたが、その顧客の注文が残っている場合のクリーニング"
+        ),
+        "trap_reason": "「NOT EXISTSはEXISTSの逆なので、customersに存在する注文が削除される」という逆の解釈をするパターン。NOT EXISTSは「対応するデータが存在しない（孤立した）行」を対象にする。削除されるのはcustomersに対応がない注文行。",
+        "choices": [
+            {"choice_text": "customersテーブルに存在するcustomer_idを持つordersの行が削除される",           "is_correct": False, "display_order": 0},
+            {"choice_text": "customersテーブルに対応するcustomer_idが存在しない孤立したordersの行が削除される", "is_correct": True,  "display_order": 1},
+            {"choice_text": "customersテーブルのすべての行が削除される",                                    "is_correct": False, "display_order": 2},
+            {"choice_text": "ordersテーブルのcustomer_id列がNULLの行のみが削除される",                      "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 64. CORRELATED_SUBQUERY（1つ選べ・難易度2・長文）部署平均との比較
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CORRELATED_SUBQUERY",
+        "difficulty": 2,
+        "question_text": (
+            "以下のSQL文が返す従業員の説明として正しいものを1つ選んでください。\n\n"
+            "SELECT e.emp_name, e.salary, e.dept_id\n"
+            "FROM employees e\n"
+            "WHERE e.salary > (\n"
+            "  SELECT AVG(e2.salary)\n"
+            "  FROM employees e2\n"
+            "  WHERE e2.dept_id = e.dept_id\n"
+            ");"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "このクエリは相関副問い合わせを使って「自分の部署の平均より高い給与の従業員」を取得します。\n\n"
+            "動作:\n"
+            "① employees e の各行を処理\n"
+            "② その行の dept_id を使ってサブクエリを実行:\n"
+            "   SELECT AVG(salary) FROM employees e2 WHERE e2.dept_id = （現在の行のdept_id）\n"
+            "③ 現在の行の salary > そのdept_idの平均 なら結果に含める\n\n"
+            "もし通常の副問い合わせ（相関なし）にすると:\n"
+            "WHERE salary > (SELECT AVG(salary) FROM employees)\n"
+            "→ 全社の平均と比較になる（別のクエリ）\n\n"
+            "外側の e.dept_id を参照することで「部署ごとの」平均を計算できるのが相関副問い合わせの強み。"
+        ),
+        "trap_reason": "「e2.dept_id = e.dept_idの右辺にe（外側別名）が使われているのに気づかず、全社平均と比較していると誤解するパターン」が多い。e.dept_idは外側クエリの行の部署IDを指しており、行ごとに異なる値になる。",
+        "choices": [
+            {"choice_text": "会社全体の平均給与より高い給与の従業員",                  "is_correct": False, "display_order": 0},
+            {"choice_text": "自分が所属する部署の平均給与より高い給与の従業員",         "is_correct": True,  "display_order": 1},
+            {"choice_text": "全部署の中で平均給与が最も高い部署に所属する従業員",       "is_correct": False, "display_order": 2},
+            {"choice_text": "全従業員の中で給与が上位50%に入る従業員",                "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 65. CORRELATED_SUBQUERY（2つ選べ・難易度3・長文）相関副問い合わせの識別
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CORRELATED_SUBQUERY",
+        "difficulty": 3,
+        "question_text": (
+            "次のSQL文のうち、相関副問い合わせが使用されているものを2つ選んでください。\n\n"
+            "A: SELECT * FROM employees\n"
+            "   WHERE salary = (SELECT MAX(salary) FROM employees)\n\n"
+            "B: SELECT * FROM employees e1\n"
+            "   WHERE salary > (SELECT AVG(salary) FROM employees e2\n"
+            "                   WHERE e2.dept_id = e1.dept_id)\n\n"
+            "C: SELECT * FROM departments\n"
+            "   WHERE dept_id IN (SELECT dept_id FROM employees\n"
+            "                     GROUP BY dept_id HAVING COUNT(*) > 5)\n\n"
+            "D: SELECT * FROM employees e\n"
+            "   WHERE EXISTS (SELECT 1 FROM orders o\n"
+            "                 WHERE o.emp_id = e.emp_id AND o.amount > 1000)"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "相関副問い合わせの判別基準: サブクエリが外側クエリの列を参照しているか\n\n"
+            "A: SELECT MAX(salary) FROM employees\n"
+            "   → 外側クエリの列を参照していない → 通常の副問い合わせ\n\n"
+            "B: WHERE e2.dept_id = e1.dept_id\n"
+            "   → e1.dept_id は外側クエリ（e1）の列を参照 → 相関副問い合わせ ✓\n\n"
+            "C: SELECT dept_id FROM employees GROUP BY dept_id HAVING COUNT(*) > 5\n"
+            "   → 外側の departments 列を参照していない → 通常の副問い合わせ\n\n"
+            "D: WHERE o.emp_id = e.emp_id\n"
+            "   → e.emp_id は外側クエリ（e）の列を参照 → 相関副問い合わせ ✓\n\n"
+            "BとDが相関副問い合わせです。"
+        ),
+        "trap_reason": "「EXISTSを使っていれば相関副問い合わせ」「INを使っていれば通常の副問い合わせ」という思い込みが多い。相関かどうかはEXISTSやINの種類ではなく、サブクエリが外側クエリの列（テーブル別名）を参照しているかどうかで判断する。",
+        "choices": [
+            {"choice_text": "A（WHERE salary = (SELECT MAX(salary) FROM employees)）",                "is_correct": False, "display_order": 0},
+            {"choice_text": "B（WHERE salary > (SELECT AVG(salary) ... WHERE e2.dept_id = e1.dept_id)）", "is_correct": True, "display_order": 1},
+            {"choice_text": "C（WHERE dept_id IN (SELECT dept_id FROM employees GROUP BY ...)）",      "is_correct": False, "display_order": 2},
+            {"choice_text": "D（WHERE EXISTS (SELECT 1 FROM orders WHERE o.emp_id = e.emp_id)）",     "is_correct": True,  "display_order": 3},
+        ],
+    },
+
 ]
