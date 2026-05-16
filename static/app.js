@@ -368,7 +368,7 @@ function updateSessionStats() {
     return;
   }
 
-  let text = `${state.sessionAnswered}問 / ${state.sessionCorrect}正解`;
+  let text = `${state.sessionCorrect} / ${state.sessionAnswered}問 正解`;
   if (state.streak >= 3) {
     text += ` 🔥${state.streak}連続`;
   }
