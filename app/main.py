@@ -1,12 +1,30 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.routers import questions, answers, stats
+from app.seed.init_db import create_tables, seed_questions
+from app.database import SessionLocal
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 起動時: テーブル作成（冪等）+ seed 投入（冪等）
+    create_tables()
+    db = SessionLocal()
+    try:
+        seed_questions(db)
+    finally:
+        db.close()
+    yield
+
 
 app = FastAPI(
     title="SQL Silver 学習支援アプリ",
     description="SQL Silver 試験のルール・制約・用語理解を強化する学習支援 Web アプリ",
+    lifespan=lifespan,
 )
 
 # API ルーターを先に登録し、/api/* へのリクエストが静的ファイルに干渉しないようにする
