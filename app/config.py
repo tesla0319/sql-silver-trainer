@@ -17,6 +17,7 @@ CATEGORIES = [
     "DB_THEORY",
     "JOIN",
     "CORRELATED_SUBQUERY",
+    "DATA_DICTIONARY",
 ]
 
 # 苦手判定の正答率閾値: この値未満かつ MIN_ANSWERS 以上回答したカテゴリを苦手とみなす

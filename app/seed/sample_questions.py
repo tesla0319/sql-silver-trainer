@@ -2466,4 +2466,302 @@ SAMPLE_QUESTIONS = [
         ],
     },
 
+    # ──────────────────────────────────────────────────────────────────
+    # 76. DATA_DICTIONARY（1つ選べ・難易度1）USER_TAB_COLUMNS の用途
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "DATA_DICTIONARY",
+        "difficulty": 1,
+        "question_text": "テーブルを構成する列の名前・データ型・NULL可否などの詳細情報を確認するためのデータディクショナリビューとして正しいものを1つ選んでください。",
+        "multi_select_count": 1,
+        "explanation": (
+            "各ディクショナリビューの役割:\n\n"
+            "・USER_TABLES:      テーブル自体の情報（テーブル名・テーブルスペース等）\n"
+            "・USER_TAB_COLUMNS: テーブルの列情報（列名・データ型・桁数・NULL可否・デフォルト値等）\n"
+            "・USER_OBJECTS:     スキーマ内のオブジェクト一覧（テーブル・ビュー・プロシージャ等）\n"
+            "・USER_CONSTRAINTS: テーブルに設定された制約情報\n\n"
+            "列情報を調べるクエリ例:\n"
+            "SELECT column_name, data_type, nullable\n"
+            "FROM user_tab_columns\n"
+            "WHERE table_name = 'EMPLOYEES';"
+        ),
+        "trap_reason": "「USER_TABLESでテーブルの全情報が確認できる」と思い込むパターン。USER_TABLESはテーブル単位の情報のみで列詳細は含まない。列の情報を得るにはUSER_TAB_COLUMNSを使う。",
+        "choices": [
+            {"choice_text": "USER_TABLES",      "is_correct": False, "display_order": 0},
+            {"choice_text": "USER_TAB_COLUMNS", "is_correct": True,  "display_order": 1},
+            {"choice_text": "USER_OBJECTS",     "is_correct": False, "display_order": 2},
+            {"choice_text": "USER_COLUMNS",     "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 77. DATA_DICTIONARY（1つ選べ・難易度1）DUAL 表
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "DATA_DICTIONARY",
+        "difficulty": 1,
+        "question_text": "Oracle の DUAL 表に関する説明として正しいものを1つ選んでください。",
+        "multi_select_count": 1,
+        "explanation": (
+            "DUAL はSYSが所有する特別な1行1列のテーブルです。\n\n"
+            "DUAL の特徴:\n"
+            "・列名は DUMMY（VARCHAR2(1)、値は 'X'）\n"
+            "・常に1行だけ返す\n"
+            "・テーブルを参照しない式や関数の結果を取得したいときに使う\n\n"
+            "主な用途例:\n"
+            "  SELECT SYSDATE FROM DUAL;         → 現在日時の取得\n"
+            "  SELECT 1 + 1 FROM DUAL;           → 算術計算\n"
+            "  SELECT USER FROM DUAL;            → 接続ユーザー名の確認\n"
+            "  SELECT seq.NEXTVAL FROM DUAL;     → シーケンス番号の取得\n\n"
+            "Oracle 10g 以降は FROM DUAL を省略できる場合がありますが、\n"
+            "互換性のため FROM DUAL を明示するのが一般的です。"
+        ),
+        "trap_reason": "「DUALは一時テーブルで各セッションで初期化される」「DUALは各ユーザーが持つ専用テーブル」という誤解が多い。DUALはSYSが所有する共有の特別テーブルであり、永続的に1行だけ存在する。",
+        "choices": [
+            {"choice_text": "DUAL は各ユーザーが自分のスキーマに作成した一時テーブルである",         "is_correct": False, "display_order": 0},
+            {"choice_text": "DUAL はSYSが所有する1行1列の特別なテーブルで、式・関数の実行に使われる", "is_correct": True,  "display_order": 1},
+            {"choice_text": "DUAL はNULL値のみを返すため算術計算の結果取得には使えない",             "is_correct": False, "display_order": 2},
+            {"choice_text": "DUAL はFROM句なしのSELECT文でのみ参照できる特殊な構文である",          "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 78. DATA_DICTIONARY（1つ選べ・難易度2）USER_OBJECTS の STATUS
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "DATA_DICTIONARY",
+        "difficulty": 2,
+        "question_text": "USER_OBJECTS ビューの STATUS 列が「INVALID」になる状況として正しいものを1つ選んでください。",
+        "multi_select_count": 1,
+        "explanation": (
+            "USER_OBJECTS の STATUS 列には VALID / INVALID の2つの値が入ります。\n\n"
+            "INVALID になる主なケース:\n"
+            "・ビューが参照するテーブルが削除・変更された\n"
+            "・プロシージャ/ファンクションが呼び出す別のオブジェクトが削除・変更された\n"
+            "・ビューを DROP して再作成した場合、それを参照する別のビューが INVALID になる\n\n"
+            "INVALID の挙動:\n"
+            "・INVALIDなオブジェクトを使おうとするとOracleが自動再コンパイルを試みる\n"
+            "・再コンパイルが成功すれば VALID に戻る\n"
+            "・再コンパイルが失敗するとエラーになる\n\n"
+            "確認クエリ: SELECT object_name, object_type, status FROM user_objects\n"
+            "            WHERE status = 'INVALID';"
+        ),
+        "trap_reason": "「INVALIDはDML操作の失敗によって発生する」という誤解が多い。INVALIDはあくまで依存するオブジェクト（テーブル・プロシージャ等）の変更・削除によって発生する。INSERTの失敗やNULL値の存在とは無関係。",
+        "choices": [
+            {"choice_text": "そのテーブルへのINSERT操作が一度でも失敗した場合",                   "is_correct": False, "display_order": 0},
+            {"choice_text": "そのビューやプロシージャが参照するオブジェクトが削除・変更された場合",  "is_correct": True,  "display_order": 1},
+            {"choice_text": "そのテーブルの行数が0件になった場合",                                "is_correct": False, "display_order": 2},
+            {"choice_text": "DBA権限を持つユーザーのオブジェクトに限りINVALIDになる",              "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 79. DATA_DICTIONARY（1つ選べ・難易度1）USER_SEQUENCES
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "DATA_DICTIONARY",
+        "difficulty": 1,
+        "question_text": "USER_SEQUENCES ビューで確認できる情報として正しいものを1つ選んでください。",
+        "multi_select_count": 1,
+        "explanation": (
+            "USER_SEQUENCES の主要な列:\n\n"
+            "・SEQUENCE_NAME:  シーケンス名\n"
+            "・MIN_VALUE:      最小値\n"
+            "・MAX_VALUE:      最大値\n"
+            "・INCREMENT_BY:   増分値\n"
+            "・CYCLE_FLAG:     最大値超過時に最小値に戻るか（Y/N）\n"
+            "・ORDER_FLAG:     順序保証（Y/N）\n"
+            "・CACHE_SIZE:     キャッシュ件数（デフォルト20）\n"
+            "・LAST_NUMBER:    次にキャッシュされる番号\n\n"
+            "注意: LAST_NUMBER はキャッシュ済みの次番号であり、\n"
+            "NEXTVAL で払い出した正確な最終値とは異なる場合があります。"
+        ),
+        "trap_reason": "「USER_SEQUENCESでNEXTVALを呼び出した回数が確認できる」「シーケンスの現在値がCURRVAL相当で確認できる」という誤解が多い。INCREMENT_BYやCYCLE_FLAGなどのシーケンス属性は確認できるが、使用回数や正確な現在値の取得は別手段が必要。",
+        "choices": [
+            {"choice_text": "NEXTVAL を呼び出した累計回数（シーケンスの使用履歴）",                   "is_correct": False, "display_order": 0},
+            {"choice_text": "INCREMENT_BY（増分値）や CYCLE_FLAG（循環設定）などのシーケンス属性",    "is_correct": True,  "display_order": 1},
+            {"choice_text": "シーケンスの現在の正確な使用値（CURRVAL と同等の情報）",                 "is_correct": False, "display_order": 2},
+            {"choice_text": "シーケンスを参照しているテーブルと列の一覧",                            "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 80. DATA_DICTIONARY（1つ選べ・難易度2）USER_VIEWS の TEXT 列
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "DATA_DICTIONARY",
+        "difficulty": 2,
+        "question_text": "Oracle でビューの定義SQL（CREATE VIEW 文で指定した SELECT 文）を確認するとき、USER_VIEWS の中で参照すべき列として正しいものを1つ選んでください。",
+        "multi_select_count": 1,
+        "explanation": (
+            "USER_VIEWS の主要な列:\n\n"
+            "・VIEW_NAME:    ビュー名\n"
+            "・TEXT_LENGTH:  TEXTの文字数\n"
+            "・TEXT:         ビューの定義SQL（SELECT文）が格納される（LONG型）\n\n"
+            "確認クエリ例:\n"
+            "SELECT text FROM user_views WHERE view_name = 'V_EMP';\n\n"
+            "注意: TEXT列はLONG型なので、SQLクライアントによっては切り捨てられる場合があります。\n"
+            "フルテキストを取得したい場合は DBMS_METADATA.GET_DDL() を使う方法もあります。"
+        ),
+        "trap_reason": "「USER_VIEWSにVIEW_TEXT列やSQL_TEXT列がある」という誤解が多い。正しい列名はTEXTのみ。また、USER_SOURCEと混同するパターンもある（USER_SOURCEはプロシージャ等のPL/SQL用で、ビューのSQLはUSER_VIEWS.TEXTに格納）。",
+        "choices": [
+            {"choice_text": "VIEW_TEXT",  "is_correct": False, "display_order": 0},
+            {"choice_text": "TEXT",       "is_correct": True,  "display_order": 1},
+            {"choice_text": "SQL_TEXT",   "is_correct": False, "display_order": 2},
+            {"choice_text": "DEFINITION", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 81. DATA_DICTIONARY（1つ選べ・難易度2）ディクショナリビューの読み取り専用
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "DATA_DICTIONARY",
+        "difficulty": 2,
+        "question_text": "USER_TABLES や USER_CONSTRAINTS などのデータディクショナリビューに対して直接 UPDATE や DELETE を実行した場合の動作として正しいものを1つ選んでください。",
+        "multi_select_count": 1,
+        "explanation": (
+            "データディクショナリビューは読み取り専用です。\n"
+            "直接 UPDATE / DELETE / INSERT を実行することはできません。\n\n"
+            "データディクショナリの変更はDDL文（CREATE / ALTER / DROP）を通じて行います:\n"
+            "・テーブルを作成 → Oracle が USER_TABLES に自動的に行を追加\n"
+            "・カラムを追加 → Oracle が USER_TAB_COLUMNS に自動的に行を追加\n"
+            "・制約を削除 → Oracle が USER_CONSTRAINTS から自動的に行を削除\n\n"
+            "ユーザーが直接ディクショナリビューを更新しようとすると:\n"
+            "ORA-01031: 権限が不足しています\n"
+            "または ORA-01751: 表は更新不可です　のエラーが発生します。"
+        ),
+        "trap_reason": "「DBA権限があればデータディクショナリを直接更新できる」という誤解が多い。DBA権限があってもディクショナリビューへの直接DMLは禁止されている。DBの構造変更はDDL文を介してOracleが自動的にディクショナリを更新する。",
+        "choices": [
+            {"choice_text": "DBA権限があれば直接UPDATE/DELETEが可能",                                     "is_correct": False, "display_order": 0},
+            {"choice_text": "データディクショナリビューは読み取り専用のため直接の更新はできない",           "is_correct": True,  "display_order": 1},
+            {"choice_text": "USER_プレフィックスのビューのみ所有者が直接更新できる",                       "is_correct": False, "display_order": 2},
+            {"choice_text": "SELECT は可能だが INSERT のみ不可で UPDATE と DELETE は実行できる",           "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 82. DATA_DICTIONARY（1つ選べ・難易度2）USER_INDEXES で確認できない情報
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "DATA_DICTIONARY",
+        "difficulty": 2,
+        "question_text": "USER_INDEXES ビューを参照しても確認できない情報として正しいものを1つ選んでください。",
+        "multi_select_count": 1,
+        "explanation": (
+            "USER_INDEXES で確認できる主な情報:\n"
+            "・INDEX_NAME:    インデックス名\n"
+            "・TABLE_NAME:    インデックスが設定されているテーブル名\n"
+            "・INDEX_TYPE:    インデックスの種類（NORMAL / BITMAP / FUNCTION-BASED NORMAL 等）\n"
+            "・UNIQUENESS:    一意か否か（UNIQUE / NONUNIQUE）\n"
+            "・STATUS:        インデックスの状態（VALID / UNUSABLE 等）\n"
+            "・TABLESPACE_NAME: 格納先テーブルスペース名\n\n"
+            "USER_INDEXES で確認できない情報:\n"
+            "・インデックスを構成する列名と順序 → USER_IND_COLUMNS で確認\n\n"
+            "SELECT index_name, column_name, column_position\n"
+            "FROM user_ind_columns WHERE table_name = 'EMPLOYEES';"
+        ),
+        "trap_reason": "「USER_INDEXESでインデックスを構成する列の詳細も確認できる」という誤解が多い。USER_INDEXESはインデックス単位の情報のみ。列の詳細（どの列が何番目の構成列か）はUSER_IND_COLUMNSで確認する必要がある。",
+        "choices": [
+            {"choice_text": "インデックスが設定されているテーブル名（TABLE_NAME）",             "is_correct": False, "display_order": 0},
+            {"choice_text": "インデックスを構成する各列の名前と定義順（列の詳細情報）",           "is_correct": True,  "display_order": 1},
+            {"choice_text": "インデックスが一意か非一意かの区別（UNIQUENESS）",                  "is_correct": False, "display_order": 2},
+            {"choice_text": "インデックスの種類（INDEX_TYPE: NORMAL / BITMAP 等）",             "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 83. DATA_DICTIONARY（2つ選べ・難易度2）USER_TABLES で確認できる情報
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "DATA_DICTIONARY",
+        "difficulty": 2,
+        "question_text": "USER_TABLES ビューで確認できる情報として正しいものを2つ選んでください。",
+        "multi_select_count": 2,
+        "explanation": (
+            "USER_TABLES の主要な列:\n\n"
+            "確認できるもの:\n"
+            "・TABLE_NAME:      テーブル名\n"
+            "・TABLESPACE_NAME: テーブルスペース名\n"
+            "・NUM_ROWS:        統計情報として記録された行数\n"
+            "・STATUS:          テーブルの状態（VALID 等）\n"
+            "・AVG_ROW_LEN:     平均行長\n"
+            "・ROW_MOVEMENT:    行移動設定\n\n"
+            "確認できないもの（別のビューが必要）:\n"
+            "・列の詳細情報      → USER_TAB_COLUMNS\n"
+            "・制約の情報        → USER_CONSTRAINTS\n"
+            "・インデックスの情報 → USER_INDEXES"
+        ),
+        "trap_reason": "「USER_TABLESでテーブルの全情報（列・制約・インデックス等）が確認できる」という誤解が多い。USER_TABLESはテーブル単位のメタ情報のみを持ち、列や制約の詳細は別のディクショナリビューで確認する必要がある。",
+        "choices": [
+            {"choice_text": "TABLE_NAME（テーブル名）",                        "is_correct": True,  "display_order": 0},
+            {"choice_text": "そのテーブルを構成する列の名前とデータ型",         "is_correct": False, "display_order": 1},
+            {"choice_text": "TABLESPACE_NAME（テーブルスペース名）",            "is_correct": True,  "display_order": 2},
+            {"choice_text": "そのテーブルに定義された制約名と制約タイプ",        "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 84. DATA_DICTIONARY（1つ選べ・難易度2）USER_SYNONYMS とスコープ
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "DATA_DICTIONARY",
+        "difficulty": 2,
+        "question_text": "Oracle のシノニムとデータディクショナリビューの関係として正しいものを1つ選んでください。",
+        "multi_select_count": 1,
+        "explanation": (
+            "シノニムには2種類あります:\n\n"
+            "プライベートシノニム（CREATE SYNONYM）:\n"
+            "・作成したユーザーのスキーマに所属する\n"
+            "・USER_SYNONYMS で確認できる\n\n"
+            "パブリックシノニム（CREATE PUBLIC SYNONYM）:\n"
+            "・全ユーザーからアクセス可能なシノニム\n"
+            "・USER_SYNONYMS では確認できない\n"
+            "・ALL_SYNONYMS または DBA_SYNONYMS で確認できる\n\n"
+            "USER_SYNONYMS の主要な列:\n"
+            "・SYNONYM_NAME:  シノニム名\n"
+            "・TABLE_OWNER:   参照先オブジェクトの所有者\n"
+            "・TABLE_NAME:    参照先の実際のオブジェクト名\n"
+            "・DB_LINK:       リモートDBへのリンク名（あれば）"
+        ),
+        "trap_reason": "「USER_SYNONYMSはパブリックシノニムを確認するためのビュー」という誤解が多い。USER_SYNONYMSは現在ユーザーが所有するプライベートシノニムのみ表示する。パブリックシノニムはALL_SYNONYMS等で確認できる。",
+        "choices": [
+            {"choice_text": "USER_SYNONYMSには現在ユーザーが所有するプライベートシノニムの情報が格納される",    "is_correct": True,  "display_order": 0},
+            {"choice_text": "USER_SYNONYMSはパブリックシノニム専用のビューで、プライベートシノニムはALL_SYNONYMSで確認できる", "is_correct": False, "display_order": 1},
+            {"choice_text": "USER_SYNONYMSはSYSスキーマのシノニムのみを表示する",                           "is_correct": False, "display_order": 2},
+            {"choice_text": "シノニムはデータディクショナリに記録されず、セッション変数として管理される",        "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 85. DATA_DICTIONARY（2つ選べ・難易度3）USER_SOURCE の対象オブジェクト
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "DATA_DICTIONARY",
+        "difficulty": 3,
+        "question_text": "次のオブジェクトのうち、USER_SOURCE ビューでソースコードを確認できるものを2つ選んでください。",
+        "multi_select_count": 2,
+        "explanation": (
+            "USER_SOURCE はPL/SQLオブジェクトのソースコードを格納するビューです。\n\n"
+            "USER_SOURCE で確認できるオブジェクト:\n"
+            "・PROCEDURE（ストアドプロシージャ）\n"
+            "・FUNCTION（ストアドファンクション）\n"
+            "・PACKAGE / PACKAGE BODY\n"
+            "・TRIGGER（トリガー）\n"
+            "・TYPE / TYPE BODY\n\n"
+            "USER_SOURCE では確認できないもの（別ビューが必要）:\n"
+            "・ビューの定義SQL → USER_VIEWS.TEXT\n"
+            "・テーブルのDDL文 → DBMS_METADATA.GET_DDL() を使用\n"
+            "・シーケンスの属性 → USER_SEQUENCES\n\n"
+            "USER_SOURCE の主要列: NAME（オブジェクト名）、TYPE（種類）、LINE（行番号）、TEXT（ソース行）"
+        ),
+        "trap_reason": "「USER_SOURCEでビューのSELECT文も確認できる」という誤解が多い。ビューの定義SQLはUSER_VIEWS.TEXTに格納されており、USER_SOURCEにはない。USER_SOURCEはPL/SQLコードを持つオブジェクト（プロシージャ・トリガー等）専用。",
+        "choices": [
+            {"choice_text": "CREATE VIEW で作成したビューのSELECT定義文",                   "is_correct": False, "display_order": 0},
+            {"choice_text": "CREATE PROCEDURE で作成したPL/SQLプロシージャのコード",         "is_correct": True,  "display_order": 1},
+            {"choice_text": "CREATE TABLE で作成したテーブルのDDL文",                       "is_correct": False, "display_order": 2},
+            {"choice_text": "CREATE TRIGGER で作成したトリガーのPL/SQLコード",              "is_correct": True,  "display_order": 3},
+        ],
+    },
+
 ]
