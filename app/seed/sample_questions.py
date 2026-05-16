@@ -3722,4 +3722,360 @@ SAMPLE_QUESTIONS = [
         ],
     },
 
+    # ──────────────────────────────────────────────────────────────────
+    # RDB_THEORY 追加10問
+    # ──────────────────────────────────────────────────────────────────
+
+    # RT-1. 主キーの性質（単一選択・難易度1）
+    {
+        "category": "RDB_THEORY",
+        "difficulty": 1,
+        "question_text": (
+            "リレーショナルデータベースにおける主キー（PRIMARY KEY）の説明として\n"
+            "正しいものを1つ選んでください。"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "主キーは次の2つの性質を同時に満たす必要があります:\n\n"
+            "① 一意性（Uniqueness）: 同じ値を持つ行が2行以上存在してはならない\n"
+            "② NOT NULL: NULL 値を格納することはできない\n\n"
+            "Oracle では PRIMARY KEY 制約を設定すると、内部的に UNIQUE 制約と\n"
+            "NOT NULL 制約が同時に適用されます。\n\n"
+            "補足:\n"
+            "・1つのテーブルに主キーは最大1つ\n"
+            "・複数列を組み合わせた複合主キーも設定可能\n"
+            "・主キーの設定はリレーショナル設計上の強い推奨だが、\n"
+            "  SQL 構文上は必須ではない（制約なしのテーブルも作成可能）"
+        ),
+        "trap_reason": "「主キー列はNULLを許容する」という誤解が多い。主キーはUNIQUE＋NOT NULLの両方が要件。また「テーブルに主キーは必ず1つ設定しなければならない」という誤解もあるが、SQLの構文上は主キーなしでもテーブルを作成できる。",
+        "choices": [
+            {"choice_text": "主キー列は一意であれば NULL を格納できる",          "is_correct": False, "display_order": 0},
+            {"choice_text": "主キー列は一意性と NOT NULL を同時に満たす必要がある", "is_correct": True,  "display_order": 1},
+            {"choice_text": "1つのテーブルに主キーを複数設定できる",              "is_correct": False, "display_order": 2},
+            {"choice_text": "主キーを持たないテーブルは作成できない",             "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # RT-2. 外部キーの参照先制約（単一選択・難易度1）
+    {
+        "category": "RDB_THEORY",
+        "difficulty": 1,
+        "question_text": (
+            "Oracle の外部キー（FOREIGN KEY）制約に関する説明として\n"
+            "正しいものを1つ選んでください。"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "外部キー（FOREIGN KEY）のルール:\n\n"
+            "【参照先】\n"
+            "  参照先は PRIMARY KEY 制約または UNIQUE 制約が付いた列のみ指定可能。\n"
+            "  任意の列を参照することはできない。\n\n"
+            "【NULL の扱い】\n"
+            "  外部キー列に NULL を格納することは許可されている。\n"
+            "  NULL は「参照なし（不明）」として扱われ、参照整合性チェックの対象外。\n\n"
+            "【組み合わせ】\n"
+            "  同じ列に主キーと外部キーを同時に設定することも可能。\n"
+            "  （例: 注文明細テーブルの order_id は orders テーブルを参照しつつ複合主キーの一部）"
+        ),
+        "trap_reason": "①「外部キー列にはNULLを格納できない」という誤解（NULLは参照整合性チェックの対象外で格納可能）。②「外部キーは任意の列を参照できる」という誤解（参照先はPRIMARY KEY or UNIQUE 列のみ）。",
+        "choices": [
+            {"choice_text": "外部キーは参照先テーブルの任意の列を参照できる",                       "is_correct": False, "display_order": 0},
+            {"choice_text": "外部キーは参照先の PRIMARY KEY または UNIQUE 制約の列のみ参照できる", "is_correct": True,  "display_order": 1},
+            {"choice_text": "外部キー列に NULL を格納することは禁止されている",                    "is_correct": False, "display_order": 2},
+            {"choice_text": "同じ列に主キーと外部キーを同時に設定することはできない",               "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # RT-3. 候補キー（2つ選べ・難易度2）
+    {
+        "category": "RDB_THEORY",
+        "difficulty": 2,
+        "question_text": (
+            "次の employees テーブルにおいて、候補キー（Candidate Key）となり得るものを\n"
+            "2つ選んでください。\n\n"
+            "employees テーブルの列:\n"
+            "  employee_id  : 全社員で一意、NOT NULL\n"
+            "  email        : 全社員で一意、NOT NULL\n"
+            "  phone        : 重複あり、NULL 可\n"
+            "  department_id: 重複あり（複数の社員が同じ部署）\n\n"
+            "A: employee_id\n"
+            "B: email\n"
+            "C: phone\n"
+            "D: (employee_id, email) の複合列"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "候補キー（Candidate Key）の定義:\n"
+            "  ① 行を一意に識別できる（一意性）\n"
+            "  ② NULL を含まない（NOT NULL）\n"
+            "  ③ 最小限の列構成（冗長な列を含まない＝超キーではない）\n\n"
+            "A【候補キー】: employee_id は一意・NOT NULL・1列で識別可能 → ✓\n\n"
+            "B【候補キー】: email も一意・NOT NULL・1列で識別可能 → ✓\n\n"
+            "C【非候補キー】: 重複あり・NULL 可のため一意識別不可 → ✗\n\n"
+            "D【非候補キー】: (employee_id, email) の複合は一意だが、employee_id\n"
+            "   だけで識別できるため「最小限ではない（超キー）」→ 候補キーではない\n\n"
+            "主キーは候補キーの中から1つを選んで指定したもの。\n"
+            "今回の例では A か B のどちらかを主キーに設定する。"
+        ),
+        "trap_reason": "候補キーの「最小限の列構成」という条件を見落とし、(employee_id, email)の複合もキーになると誤答するパターン。employee_idだけで一意識別できる以上、emailを追加した複合列は冗長で候補キーの定義を外れる（超キーになる）。",
+        "choices": [
+            {"choice_text": "A: employee_id",                "is_correct": True,  "display_order": 0},
+            {"choice_text": "B: email",                      "is_correct": True,  "display_order": 1},
+            {"choice_text": "C: phone",                      "is_correct": False, "display_order": 2},
+            {"choice_text": "D: (employee_id, email) の複合", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # RT-4. 第1正規形（1NF）の条件（単一選択・難易度2）
+    {
+        "category": "RDB_THEORY",
+        "difficulty": 2,
+        "question_text": (
+            "次のテーブル設計のうち、第1正規形（1NF）の条件を満たしていないものを\n"
+            "1つ選んでください。\n\n"
+            "A: orders(order_id, customer_id, order_date)\n"
+            "B: order_items(order_id, product_id, quantity, unit_price)\n"
+            "C: employees(employee_id, name, skill_list)\n"
+            "   ※ skill_list 列に 'Java,Python,SQL' のようにカンマ区切りで複数スキルを格納\n"
+            "D: departments(dept_id, dept_name, location)"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "第1正規形（1NF）の条件:\n"
+            "  ① 各セルには原子値（Atomic Value）のみ格納する（繰り返しグループなし）\n"
+            "  ② 1つの列に複数の値をまとめて入れない\n\n"
+            "A【1NF ○】: 各列は単一値のみ → 条件を満たす\n\n"
+            "B【1NF ○】: 複合主キーだが各列は単一値 → 条件を満たす\n\n"
+            "C【1NF ✗】: skill_list 列に 'Java,Python,SQL' という複数値を格納している。\n"
+            "   これは繰り返しグループ（Non-atomic value）であり 1NF 違反。\n"
+            "   正規化するには skills(employee_id, skill) という別テーブルに分離する。\n\n"
+            "D【1NF ○】: 各列は単一値のみ → 条件を満たす"
+        ),
+        "trap_reason": "「データが格納されていれば1NF」という誤解。1NFの核心は「各セルに単一の原子値のみ」という条件。カンマ区切りや配列のような複数値は見た目は1列でも1NF違反となる。",
+        "choices": [
+            {"choice_text": "A: orders(order_id, customer_id, order_date)",                        "is_correct": False, "display_order": 0},
+            {"choice_text": "B: order_items(order_id, product_id, quantity, unit_price)",          "is_correct": False, "display_order": 1},
+            {"choice_text": "C: employees(employee_id, name, skill_list) ※カンマ区切り複数値格納", "is_correct": True,  "display_order": 2},
+            {"choice_text": "D: departments(dept_id, dept_name, location)",                        "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # RT-5. 第2正規形（2NF）への分解（2つ選べ・難易度2）
+    {
+        "category": "RDB_THEORY",
+        "difficulty": 2,
+        "question_text": (
+            "次の注文明細テーブルを第2正規形（2NF）に分解する方針として\n"
+            "正しいものを2つ選んでください。\n\n"
+            "テーブル: order_details(order_id, product_id, quantity, product_name, unit_price)\n"
+            "主キー  : (order_id, product_id) の複合主キー\n\n"
+            "関数従属性:\n"
+            "  (order_id, product_id) → quantity\n"
+            "  product_id             → product_name, unit_price  ← 部分関数従属\n\n"
+            "A: product_name と unit_price は product_id のみに従属するため products テーブルとして分離する\n"
+            "B: quantity は (order_id, product_id) 両方に従属するため order_details に残す\n"
+            "C: order_id を主キーとする単独テーブルに変更することで2NFになる\n"
+            "D: quantity も product_id のみに従属するため products テーブルへ移動する"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "第2正規形（2NF）の条件:\n"
+            "  1NF を満たし、かつ すべての非キー属性が主キー全体に完全関数従属している\n"
+            "  （主キーの一部への部分関数従属がない）\n\n"
+            "A【正】: product_name, unit_price は product_id だけで決まる（部分関数従属）。\n"
+            "   これを products(product_id, product_name, unit_price) として分離することで\n"
+            "   部分従属を解消できる。\n\n"
+            "B【正】: quantity は「どの注文でどの商品を何個買ったか」であり、\n"
+            "   order_id と product_id の両方がなければ決まらない（完全関数従属）。\n"
+            "   order_details に残すのが正しい。\n\n"
+            "C【誤】: 複合主キーをやめることは 2NF への分解ではない。\n"
+            "   必要なのは「部分従属する非キー属性を別テーブルへ移す」こと。\n\n"
+            "D【誤】: quantity は注文ごとに異なり、product_id だけでは決まらない。\n"
+            "   products テーブルへ移動するのは誤り。"
+        ),
+        "trap_reason": "①部分関数従属と完全関数従属の区別が曖昧で「全列を複合主キーのテーブルに置けばよい」と誤解するパターン。②quantityが「商品固有の属性」と混同されてDを選んでしまうパターン（数量は注文ごとに変わる非キー属性）。",
+        "choices": [
+            {"choice_text": "A: product_name と unit_price を products テーブルとして分離する",       "is_correct": True,  "display_order": 0},
+            {"choice_text": "B: quantity は完全関数従属のため order_details に残す",                  "is_correct": True,  "display_order": 1},
+            {"choice_text": "C: order_id 単独を主キーにすることで2NFになる",                          "is_correct": False, "display_order": 2},
+            {"choice_text": "D: quantity も product_id のみに従属するため products テーブルへ移す",   "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # RT-6. 第3正規形（3NF）と推移関数従属（単一選択・難易度3）
+    {
+        "category": "RDB_THEORY",
+        "difficulty": 3,
+        "question_text": (
+            "次のテーブルが第2正規形（2NF）は満たすが第3正規形（3NF）を満たさない\n"
+            "理由として正しいものを1つ選んでください。\n\n"
+            "テーブル: employees(employee_id, dept_id, dept_name, dept_location)\n"
+            "主キー  : employee_id\n\n"
+            "関数従属性:\n"
+            "  employee_id → dept_id\n"
+            "  dept_id     → dept_name, dept_location"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "第3正規形（3NF）の条件:\n"
+            "  2NF を満たし、かつ 非キー属性が主キー以外の非キー属性に\n"
+            "  推移的に関数従属していない\n\n"
+            "このテーブルでは:\n"
+            "  employee_id → dept_id → dept_name\n"
+            "  employee_id → dept_id → dept_location\n\n"
+            "dept_name と dept_location は、主キーである employee_id に\n"
+            "直接従属せず、非キー属性である dept_id を経由して\n"
+            "推移的に従属している。これが「推移関数従属」であり 3NF 違反。\n\n"
+            "【3NF への分解】\n"
+            "  employees(employee_id, dept_id)\n"
+            "  departments(dept_id, dept_name, dept_location)\n\n"
+            "【問題点（更新異常）】\n"
+            "  部署名が変わったとき、その部署に所属する全社員の行を更新しなければならない。\n"
+            "  更新漏れが生じると dept_name の値が行によって異なる矛盾（更新異常）が発生する。"
+        ),
+        "trap_reason": "「主キーに直接従属していない列がある」という説明でAとBを混同するパターン。3NF違反は「主キー→非キーA→非キーB」という推移的な従属チェーンが存在すること。dept_nameはemployee_idに（dept_idを経由せず）直接従属していないことが問題。",
+        "choices": [
+            {"choice_text": "dept_name と dept_location が employee_id に直接従属していないから",                       "is_correct": False, "display_order": 0},
+            {"choice_text": "dept_name と dept_location が非キー属性 dept_id を経由して推移的に employee_id に依存しているから", "is_correct": True,  "display_order": 1},
+            {"choice_text": "dept_id が主キーでないから",                                                               "is_correct": False, "display_order": 2},
+            {"choice_text": "employee_id だけでは dept_name を一意に決められないから",                                  "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # RT-7. 関数従属性の定義（単一選択・難易度2）
+    {
+        "category": "RDB_THEORY",
+        "difficulty": 2,
+        "question_text": (
+            "関数従属性（Functional Dependency）に関する説明として\n"
+            "正しいものを1つ選んでください。"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "関数従属 X → Y（X が Y を関数的に決定する）の意味:\n"
+            "  「X の値が同じであれば、Y の値も必ず同じである」\n\n"
+            "具体例:\n"
+            "  社員番号 → 氏名 （社員番号が決まれば氏名は一意に決まる）\n"
+            "  部署番号 → 部署名（部署番号が決まれば部署名は一意に決まる）\n\n"
+            "【推移律（Armstrong の公理より）】\n"
+            "  X → Y かつ Y → Z であれば X → Z が成立する（推移律）\n"
+            "  これが第3正規形で除去しようとする「推移関数従属」の根拠。\n\n"
+            "【注意】\n"
+            "  X → Y は X と Y が1対1対応することを意味しない。\n"
+            "  複数の X の値が同じ Y を指してもよい（多対1も可）。\n"
+            "  例: 同じ部署に複数の社員が所属できる"
+        ),
+        "trap_reason": "①「X→Y は X と Y が1対1対応を意味する」という誤解。X→Yは「Xが決まればYが一意に決まる」だけで、異なるXが同じYを指すのは問題ない。②推移律を知らず「X→Y かつ Y→Z でも X→Z は成立しない」と誤答するパターン。",
+        "choices": [
+            {"choice_text": "X → Y は「X と Y が常に1対1で対応する」ことを意味する",               "is_correct": False, "display_order": 0},
+            {"choice_text": "X → Y は「X の値が同じならば Y の値も必ず同じである」ことを意味する", "is_correct": True,  "display_order": 1},
+            {"choice_text": "X → Y かつ Y → Z であれば X → Z は成立しない",                       "is_correct": False, "display_order": 2},
+            {"choice_text": "X → Y は「Y の値が変われば必ず X の値も変わる」ことを意味する",        "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # RT-8. ON DELETE CASCADE の動作（単一選択・難易度1）
+    {
+        "category": "RDB_THEORY",
+        "difficulty": 1,
+        "question_text": (
+            "Oracle で外部キー制約に ON DELETE CASCADE を設定した場合の動作として\n"
+            "正しいものを1つ選んでください。\n\n"
+            "テーブル構成:\n"
+            "  orders(order_id PRIMARY KEY, customer_id, ...)\n"
+            "  order_items(item_id PRIMARY KEY, order_id REFERENCES orders(order_id)\n"
+            "              ON DELETE CASCADE, ...)"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "ON DELETE CASCADE の動作:\n"
+            "  親テーブル（orders）の行を DELETE すると、\n"
+            "  その行を参照している子テーブル（order_items）の行も自動的に削除される。\n\n"
+            "Oracle の外部キーで指定できる削除ルール:\n\n"
+            "  ON DELETE CASCADE  → 親行削除時に子行も連鎖削除\n"
+            "  ON DELETE SET NULL → 親行削除時に子の外部キー列を NULL に更新\n"
+            "  （指定なし）       → 親行削除時に子行が存在するとエラー（デフォルト）\n\n"
+            "Oracle では ON DELETE RESTRICT / ON DELETE NO ACTION は\n"
+            "明示的な構文として存在しないが、指定なしの動作が実質的に同じ。"
+        ),
+        "trap_reason": "ON DELETE CASCADEとON DELETE SET NULLを混同するパターン。CASCADEは「子行ごと削除」、SET NULLは「子行の外部キー列をNULLにする」という違いを押さえること。また「CASCADEを設定すると親の削除がエラーになる」という誤解もある。",
+        "choices": [
+            {"choice_text": "orders の行を削除すると、対応する order_items の行も自動削除される",       "is_correct": True,  "display_order": 0},
+            {"choice_text": "orders の行を削除すると、order_items の order_id 列が NULL に更新される", "is_correct": False, "display_order": 1},
+            {"choice_text": "order_items に参照行が存在する場合、orders の行を削除するとエラーになる", "is_correct": False, "display_order": 2},
+            {"choice_text": "orders の行を削除しても order_items には何の影響も与えない",               "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # RT-9. カーディナリティとリレーション設計（2つ選べ・難易度3）
+    {
+        "category": "RDB_THEORY",
+        "difficulty": 3,
+        "question_text": (
+            "エンティティ間のカーディナリティ（多重度）とテーブル設計に関して\n"
+            "正しい記述を2つ選んでください。\n\n"
+            "A: 「部署(1) : 社員(N)」の関係では、社員テーブル側に\n"
+            "   dept_id 外部キーを配置するのが適切な設計である\n"
+            "B: 「注文(M) : 商品(N)」のM:N関係をリレーショナルDBで表現するには、\n"
+            "   中間テーブル（例: order_items）が必要である\n"
+            "C: M:N の関係は、どちらか一方のテーブルに外部キーを追加するだけで表現できる\n"
+            "D: 1:1 の関係にある2つのエンティティは、必ず1つのテーブルに統合しなければならない"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "A【正】: 1:N 関係では N 側（多側）のテーブルに外部キーを持たせる。\n"
+            "   社員テーブルに dept_id を持たせることで「この社員はこの部署」が表現できる。\n"
+            "   部署テーブル側に社員の情報を持たせようとすると列が可変になりリレーショナル設計に反する。\n\n"
+            "B【正】: M:N 関係は外部キーだけでは直接表現できない。\n"
+            "   1つの注文が複数の商品を持ち、1つの商品が複数の注文に現れるため、\n"
+            "   中間テーブル order_items(order_id, product_id, quantity) が必要。\n\n"
+            "C【誤】: 外部キーは 1:N の関係を表すもの。M:N を片側外部キーで表現すると\n"
+            "   1列に複数の値を入れる（1NF 違反）か、情報が欠落するかのどちらかになる。\n\n"
+            "D【誤】: 1:1 関係でもエンティティを分割したまま 2 テーブルで管理することは有効。\n"
+            "   例: 社員の基本情報と機密情報（給与など）を分離してアクセス制御を分ける。\n"
+            "   統合するかどうかは業務要件やアクセス制御の観点で判断する。"
+        ),
+        "trap_reason": "①「1:N 関係でどちら側に外部キーを置くか」を逆に理解して1側（部署テーブル）に外部キーを持たせるパターン。②「M:N は外部キーだけで表現できる」という誤解（中間テーブルが必要）。③1:1は必ず統合しなければならないという誤解。",
+        "choices": [
+            {"choice_text": "A: 1:N 関係（部署:社員）では社員テーブルに dept_id 外部キーを置く",        "is_correct": True,  "display_order": 0},
+            {"choice_text": "B: M:N 関係（注文:商品）の表現には中間テーブルが必要",                    "is_correct": True,  "display_order": 1},
+            {"choice_text": "C: M:N 関係は一方のテーブルに外部キーを追加するだけで表現できる",          "is_correct": False, "display_order": 2},
+            {"choice_text": "D: 1:1 関係の2エンティティは必ず1テーブルに統合しなければならない",        "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # RT-10. 正規化の目的とトレードオフ（単一選択・難易度3）
+    {
+        "category": "RDB_THEORY",
+        "difficulty": 3,
+        "question_text": (
+            "正規化（Normalization）の主な目的と、意図的に非正規化（Denormalization）を\n"
+            "行う理由に関する説明として最も適切なものを1つ選んでください。"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "【正規化の目的】\n"
+            "  ① データの冗長性を排除する\n"
+            "  ② 更新異常（挿入異常・削除異常・更新異常）を防ぐ\n"
+            "  ③ データの一貫性を保ちやすくする\n\n"
+            "【更新異常の種類】\n"
+            "  挿入異常: 主キーが揃わないと関連データを追加できない\n"
+            "  削除異常: 行を削除すると必要な情報まで失われる\n"
+            "  更新異常: 冗長な列があると更新漏れで矛盾が生じる\n\n"
+            "【非正規化（Denormalization）】\n"
+            "  意図的に冗長性を持たせることで JOIN を減らし\n"
+            "  SELECT クエリのパフォーマンスを向上させる手法。\n"
+            "  OLAP（分析系）や大規模参照系システムで使われる。\n"
+            "  代償として、更新時のメンテナンスコストが増加する。\n\n"
+            "正規化は「正しいデータ管理」のため、非正規化は「読み取り性能」のために行う。"
+        ),
+        "trap_reason": "「正規化するとSELECTが速くなる」という誤解（JOINが増えるため必ずしも速くならない。むしろ非正規化がSELECT高速化の手法）。また「正規化の目的はNULLをなくすこと」という誤解も見られる。正規化の本質は冗長性排除と更新異常の防止。",
+        "choices": [
+            {"choice_text": "正規化の目的は SELECT クエリのパフォーマンスを最大化することである",                          "is_correct": False, "display_order": 0},
+            {"choice_text": "正規化の目的はデータの冗長性排除と更新異常防止であり、非正規化は SELECT 性能向上のために行う", "is_correct": True,  "display_order": 1},
+            {"choice_text": "正規化の目的はすべての列から NULL をなくすことである",                                        "is_correct": False, "display_order": 2},
+            {"choice_text": "正規化を進めるほどデータの一貫性は低下する",                                                  "is_correct": False, "display_order": 3},
+        ],
+    },
+
 ]
