@@ -1437,4 +1437,347 @@ SAMPLE_QUESTIONS = [
         ],
     },
 
+    # ──────────────────────────────────────────────────────────────────
+    # 46. CONSTRAINT（1つ選べ・難易度2）FOREIGN KEY列のNULL値
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CONSTRAINT",
+        "difficulty": 2,
+        "question_text": (
+            "以下のテーブル定義において、orders.customer_id 列に NULL をINSERTした場合の\n"
+            "動作として正しいものを1つ選んでください。\n\n"
+            "CREATE TABLE customers (customer_id NUMBER PRIMARY KEY, name VARCHAR2(50));\n"
+            "CREATE TABLE orders (\n"
+            "  order_id    NUMBER PRIMARY KEY,\n"
+            "  customer_id NUMBER REFERENCES customers(customer_id)\n"
+            ");"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "FOREIGN KEY制約が設定された列にNULL値を格納することは許可されています。\n\n"
+            "FKの制約チェックは「NULLでない値が参照先テーブルに存在するか」を検証します。\n"
+            "NULLは「不明な値」として扱われ、FK制約のチェック対象外になります。\n\n"
+            "・customer_id = NULL のINSERT → FK制約をパス → 成功\n"
+            "・customer_id = 999 で customers に 999 が存在しない → FK制約違反 → エラー\n\n"
+            "NULL値を持つFKは「所属先不明」の行（例:未確定の注文）を表現するときに使われます。\n"
+            "NULLを禁止したい場合はFKに加えてNOT NULL制約も設定します。"
+        ),
+        "trap_reason": "「FK制約がある列にはNULL以外の参照先が必要」という誤解が多い。実際はNULLはFK制約の対象外であり格納可能。NULLを禁止するにはNOT NULLを別途設定する必要がある。",
+        "choices": [
+            {"choice_text": "customers にNULLのcustomer_idが存在しないためFK違反でエラーになる",   "is_correct": False, "display_order": 0},
+            {"choice_text": "NULLはFK制約の対象外のためエラーにならず、INSERTが成功する",          "is_correct": True,  "display_order": 1},
+            {"choice_text": "NULLは自動的に0に変換されてINSERTされる",                           "is_correct": False, "display_order": 2},
+            {"choice_text": "FK制約のある列はNOT NULLが暗黙的に設定されるためエラーになる",        "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 47. CONSTRAINT（1つ選べ・難易度2）ON DELETE CASCADE
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CONSTRAINT",
+        "difficulty": 2,
+        "question_text": (
+            "以下の定義のテーブルで、departments から dept_id=10 の行をDELETEした場合の\n"
+            "動作として正しいものを1つ選んでください。\n\n"
+            "CREATE TABLE departments (dept_id NUMBER PRIMARY KEY, dept_name VARCHAR2(50));\n"
+            "CREATE TABLE employees (\n"
+            "  emp_id  NUMBER PRIMARY KEY,\n"
+            "  dept_id NUMBER REFERENCES departments(dept_id) ON DELETE CASCADE\n"
+            ");"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "ON DELETE CASCADE を指定すると、親テーブルの行を削除したときに\n"
+            "子テーブルの参照行も自動的に削除されます。\n\n"
+            "・departments の dept_id=10 を DELETE\n"
+            "→ employees の dept_id=10 を参照しているすべての行も自動DELETE\n\n"
+            "ON DELETE オプションの比較:\n"
+            "・ON DELETE CASCADE:  親削除 → 子行も削除\n"
+            "・ON DELETE SET NULL: 親削除 → 子のFK列をNULLに更新\n"
+            "・指定なし（デフォルト）: 子行が存在する場合は親の削除がエラーになる"
+        ),
+        "trap_reason": "「FK制約があると親行の削除は常にエラーになる」という誤解が多い。ON DELETE CASCADEを指定すれば子行ごと削除される。ON DELETE SET NULLとCASCADEの動作の違いも頻出の比較ポイント。",
+        "choices": [
+            {"choice_text": "FK制約違反のエラーになりDELETEが拒否される",                            "is_correct": False, "display_order": 0},
+            {"choice_text": "departmentsの行のみが削除され、employeesのdept_id=10の行はNULLになる",  "is_correct": False, "display_order": 1},
+            {"choice_text": "departmentsの行が削除され、dept_id=10を参照するemployeesの行も自動削除される", "is_correct": True, "display_order": 2},
+            {"choice_text": "CASCADEはDROP TABLE等のDDLにのみ適用され、DELETEでは動作しない",         "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 48. CONSTRAINT（2つ選べ・難易度2）CHECK制約とNULL値
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CONSTRAINT",
+        "difficulty": 2,
+        "question_text": (
+            "以下の定義において、price = NULL の行をINSERTするときのCHECK制約の動作として\n"
+            "正しいものを2つ選んでください。\n\n"
+            "CREATE TABLE products (\n"
+            "  product_id NUMBER PRIMARY KEY,\n"
+            "  price      NUMBER CHECK (price > 0)\n"
+            ");\n\n"
+            "INSERT INTO products VALUES (1, NULL);"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "CHECK制約はその条件がFALSEのときにのみ違反になります。\n"
+            "NULL > 0 を評価すると結果は NULL（UNKNOWN）になります。\n\n"
+            "OracleのCHECK制約:\n"
+            "・条件が TRUE → 制約をパス（挿入成功）\n"
+            "・条件が NULL（UNKNOWN）→ 制約をパス（挿入成功）\n"
+            "・条件が FALSE → 制約違反（ORA-02290 エラー）\n\n"
+            "したがって price = NULL の場合:\n"
+            "NULL > 0 → NULL（UNKNOWN）→ CHECK制約をパス → INSERTが成功します。\n\n"
+            "NULLを拒否したい場合はCHECK制約に加えてNOT NULL制約も必要です:\n"
+            "price NUMBER NOT NULL CHECK (price > 0)"
+        ),
+        "trap_reason": "「NULL > 0 はFALSEとなりCHECK制約違反になる」という誤解が非常に多い。SQLの3値論理ではNULLを含む比較結果はNULL（UNKNOWN）となり、CHECKのFALSE判定に当たらない。NOT NULLとCHECKを組み合わせて初めてNULLを完全に拒否できる。",
+        "choices": [
+            {"choice_text": "NULL > 0 はNULL（UNKNOWN）と評価されCHECK制約をパスしINSERTが成功する",    "is_correct": True,  "display_order": 0},
+            {"choice_text": "NULL > 0 はFALSEと評価されCHECK制約違反（ORA-02290）でエラーになる",       "is_correct": False, "display_order": 1},
+            {"choice_text": "NULL値を拒否するにはCHECK制約だけでなくNOT NULL制約も別途追加する必要がある", "is_correct": True,  "display_order": 2},
+            {"choice_text": "CHECK制約があるとNULL値は自動的に0に変換されてINSERTされる",               "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 49. CONSTRAINT（1つ選べ・難易度3）DEFERRABLE制約
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CONSTRAINT",
+        "difficulty": 3,
+        "question_text": (
+            "以下の制約定義の動作として正しいものを1つ選んでください。\n\n"
+            "ALTER TABLE orders ADD CONSTRAINT fk_customer\n"
+            "  FOREIGN KEY (customer_id) REFERENCES customers(customer_id)\n"
+            "  DEFERRABLE INITIALLY DEFERRED;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "DEFERRABLE INITIALLY DEFERRED の意味:\n\n"
+            "・DEFERRABLE: トランザクション内で制約チェックのタイミングを遅延できる\n"
+            "・INITIALLY DEFERRED: デフォルトで「COMMIT時にチェック」する動作\n\n"
+            "この設定では:\n"
+            "① INSERT/UPDATE の実行時点では制約チェックが行われない\n"
+            "② COMMIT 時に制約チェックが実行される\n"
+            "③ COMMIT 時に違反が検出されると、トランザクション全体がロールバックされる\n\n"
+            "DEFERRABLE の主な用途:\n"
+            "・親テーブルと子テーブルへの挿入順序を気にせずに1トランザクションで処理したいとき\n"
+            "・循環参照がある制約の一時的な回避\n\n"
+            "SET CONSTRAINT fk_customer IMMEDIATE; で特定トランザクションだけ即時チェックに変更可能。"
+        ),
+        "trap_reason": "「DEFERRABLEにすると制約が永遠にチェックされない」という誤解が多い。COMMIT時には必ず制約チェックが行われる。チェックを「毎文の直後」から「COMMIT時」に先送りするだけであり、制約そのものが無効化されるわけではない。",
+        "choices": [
+            {"choice_text": "INSERTとUPDATE時は制約チェックが行われず、ROLLBACKのみ制約が検証される",  "is_correct": False, "display_order": 0},
+            {"choice_text": "各DML実行時の制約チェックが省略され、COMMIT時にまとめて制約チェックが行われる", "is_correct": True, "display_order": 1},
+            {"choice_text": "DEFERRABLE制約は一切チェックされないため、FK違反のデータを恒久的に保存できる", "is_correct": False, "display_order": 2},
+            {"choice_text": "INITIALLY DEFERREDにより、このFK制約は最初から無効（DISABLE）状態で定義される", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 50. CONSTRAINT（1つ選べ・難易度1）既存データと制約追加
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CONSTRAINT",
+        "difficulty": 1,
+        "question_text": (
+            "email 列に重複データが既に存在するテーブルに、以下のSQL文を実行した場合の\n"
+            "動作として正しいものを1つ選んでください。\n\n"
+            "ALTER TABLE employees ADD CONSTRAINT uq_email UNIQUE (email);"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "ALTER TABLE ADD CONSTRAINT でUNIQUE制約を追加するとき、\n"
+            "Oracleは既存のすべてのデータに対して制約チェックを実行します。\n\n"
+            "・既存データに重複がある → ORA-02299 エラー（制約の追加が失敗）\n"
+            "・制約は追加されない（テーブル定義は変更されない）\n\n"
+            "既存データが制約を満たさない場合の対処法:\n"
+            "① 重複データをクリーニングしてから制約を追加する\n"
+            "② ENABLE NOVALIDATE オプションで既存データをチェックせずに有効化する:\n"
+            "   ALTER TABLE employees ADD CONSTRAINT uq_email UNIQUE (email)\n"
+            "   ENABLE NOVALIDATE;\n"
+            "   （既存データは保証されないが新規DMLには制約が適用される）"
+        ),
+        "trap_reason": "「ALTER TABLE ADD CONSTRAINTは制約定義だけで既存データはチェックしない」という誤解が多い。実際はデフォルトでENABLE VALIDATEで追加されるため既存データがチェックされ、違反があれば追加自体が失敗する。",
+        "choices": [
+            {"choice_text": "重複データがあってもUNIQUE制約は定義されるが、新規INSERTのみに適用される",  "is_correct": False, "display_order": 0},
+            {"choice_text": "既存データの重複がORA-02299エラーを引き起こし、制約の追加が失敗する",       "is_correct": True,  "display_order": 1},
+            {"choice_text": "重複データは自動的に削除されてから制約が追加される",                       "is_correct": False, "display_order": 2},
+            {"choice_text": "制約はDISABLE状態で追加されるため、既存データはチェックされない",          "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 51. CONSTRAINT（1つ選べ・難易度2）ENABLE NOVALIDATE
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CONSTRAINT",
+        "difficulty": 2,
+        "question_text": (
+            "以下のSQL文で制約を有効化した場合の動作として正しいものを1つ選んでください。\n\n"
+            "ALTER TABLE employees ENABLE NOVALIDATE CONSTRAINT chk_salary;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "ENABLE NOVALIDATE は、制約を有効化しつつ既存データのチェックをスキップする設定です。\n\n"
+            "有効化オプションの比較:\n"
+            "・ENABLE VALIDATE（デフォルト）:\n"
+            "  既存データすべてを検証してから制約を有効化\n"
+            "  → 既存データに違反があればエラー\n\n"
+            "・ENABLE NOVALIDATE:\n"
+            "  既存データはチェックせず、今後のDML操作（INSERT/UPDATE）に対してのみ制約を適用\n"
+            "  → 既存の違反データはそのまま残る\n\n"
+            "用途: 大量の既存データがある場合に検証コストを回避しつつ、\n"
+            "新規データの品質を保証したいときに使用します。"
+        ),
+        "trap_reason": "「ENABLEにすれば必ず既存データも検証される」という誤解が多い。NOVALIDATEを付けると既存データをチェックせずに制約が有効化される。既存の違反データはそのまま残り、新規DMLにのみ制約が適用される点に注意。",
+        "choices": [
+            {"choice_text": "既存のすべてのデータに対して制約チェックが実行され、違反があればエラーになる", "is_correct": False, "display_order": 0},
+            {"choice_text": "既存データはチェックせず、今後のINSERT/UPDATEのみに制約が適用される",      "is_correct": True,  "display_order": 1},
+            {"choice_text": "NOVALIDATE はDEFERRABLE制約にのみ指定できるため、非DEFERRABLE制約ではエラーになる", "is_correct": False, "display_order": 2},
+            {"choice_text": "制約は有効化されるが、INSERTのみが対象でUPDATEには制約が適用されない",      "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 52. CONSTRAINT（1つ選べ・難易度2）複合PRIMARY KEY
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CONSTRAINT",
+        "difficulty": 2,
+        "question_text": (
+            "以下のテーブル定義の複合PRIMARY KEYに関する説明として正しいものを1つ選んでください。\n\n"
+            "CREATE TABLE enrollment (\n"
+            "  student_id NUMBER,\n"
+            "  course_id  NUMBER,\n"
+            "  grade      VARCHAR2(2),\n"
+            "  CONSTRAINT pk_enroll PRIMARY KEY (student_id, course_id)\n"
+            ");"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "複合PRIMARY KEYは、指定した複数列の組み合わせが一意であることを保証します。\n\n"
+            "このテーブルでの挙動:\n"
+            "・(student_id=1, course_id=101) の後に (student_id=1, course_id=102) はINSERT可能\n"
+            "  → student_id が同じでも course_id が異なれば組み合わせが一意\n"
+            "・(student_id=1, course_id=101) の重複はエラー\n"
+            "・(student_id=NULL, course_id=101) はエラー\n"
+            "  → PRIMARY KEY の構成列はすべてNOT NULLが強制される\n\n"
+            "つまり「個別列の一意性」ではなく「列の組み合わせの一意性」が保証されます。"
+        ),
+        "trap_reason": "「複合PK内の各列が個別に一意でなければならない」という誤解が多い。実際は「組み合わせ」が一意であればよく、同じstudent_idやcourse_idを持つ行が複数存在してもよい。また、複合PK内の列はNULL不可という点も見落としやすい。",
+        "choices": [
+            {"choice_text": "student_idが同じ行は複数存在できない（student_id単独でも一意でなければならない）",       "is_correct": False, "display_order": 0},
+            {"choice_text": "student_idが同じでもcourse_idが異なれば複数の行をINSERTできる（組み合わせの一意性）",    "is_correct": True,  "display_order": 1},
+            {"choice_text": "course_idが同じ行は複数存在できない（course_id単独でも一意でなければならない）",         "is_correct": False, "display_order": 2},
+            {"choice_text": "複合PK内のいずれかの列にNULL値を格納すれば複合値の一意性チェックが免除される",           "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 53. CONSTRAINT（2つ選べ・難易度2）PK と UNIQUE の違い
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CONSTRAINT",
+        "difficulty": 2,
+        "question_text": "PRIMARY KEY制約とUNIQUE制約の違いとして正しいものを2つ選んでください。",
+        "multi_select_count": 2,
+        "explanation": (
+            "PRIMARY KEY と UNIQUE の主な違い:\n\n"
+            "① NULL の扱い:\n"
+            "・PRIMARY KEY: 構成列はすべて NOT NULL が強制（NULL 不可）\n"
+            "・UNIQUE:       NULL 値は許容される（複数行の NULL も可）\n\n"
+            "② テーブルあたりの定義数:\n"
+            "・PRIMARY KEY: テーブルにつき1つのみ定義可能\n"
+            "・UNIQUE:       複数定義可能\n\n"
+            "③ インデックス（共通）:\n"
+            "・どちらもOracleが自動的にUNIQUEインデックスを作成する\n\n"
+            "④ 目的:\n"
+            "・PRIMARY KEY: テーブルの主識別子（行を一意に特定する主要な列）\n"
+            "・UNIQUE:       ビジネスキーなど補助的な一意性の保証"
+        ),
+        "trap_reason": "「UNIQUE制約もNULLを許可しない」「PRIMARY KEYとUNIQUEはほぼ同じ」という誤解が多い。NULLの扱いとテーブルあたりの定義数が主要な違い。どちらも自動でインデックスを作成する点は共通。",
+        "choices": [
+            {"choice_text": "PRIMARY KEY列はNULL不可だが、UNIQUE列はNULL値を許容する",                          "is_correct": True,  "display_order": 0},
+            {"choice_text": "1つのテーブルにPRIMARY KEYは1つのみ定義できるが、UNIQUEは複数定義できる",          "is_correct": True,  "display_order": 1},
+            {"choice_text": "PRIMARY KEY制約は自動でインデックスを作成するが、UNIQUE制約は作成しない",           "is_correct": False, "display_order": 2},
+            {"choice_text": "UNIQUE制約はNOT NULL制約が暗黙的に付与されるためNULL値を格納できない",             "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 54. CONSTRAINT（1つ選べ・難易度1）USER_CONSTRAINTSのCONSTRAINT_TYPE
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CONSTRAINT",
+        "difficulty": 1,
+        "question_text": (
+            "データディクショナリビュー USER_CONSTRAINTS の CONSTRAINT_TYPE 列において、\n"
+            "FOREIGN KEY制約に対応する値として正しいものを1つ選んでください。"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "USER_CONSTRAINTS の CONSTRAINT_TYPE 列の値:\n\n"
+            "・P: PRIMARY KEY\n"
+            "・U: UNIQUE\n"
+            "・C: CHECK（NOT NULL 制約も内部的には CHECK として格納される）\n"
+            "・R: REFERENTIAL（FOREIGN KEY）\n\n"
+            "確認クエリの例:\n"
+            "SELECT constraint_name, constraint_type\n"
+            "FROM user_constraints\n"
+            "WHERE table_name = 'EMPLOYEES';\n\n"
+            "注意: NOT NULL は独自の制約タイプではなく、\n"
+            "CHECK制約（type='C'）として USER_CONSTRAINTS に格納されます。"
+        ),
+        "trap_reason": "FK制約のCONSTRAINT_TYPEが 'F' や 'FK' と思い込むパターン。正しくは 'R'（Referential integrity の略）。また、NOT NULL が 'N' ではなく 'C' (CHECK) として格納される点も試験頻出の落とし穴。",
+        "choices": [
+            {"choice_text": "F",  "is_correct": False, "display_order": 0},
+            {"choice_text": "R",  "is_correct": True,  "display_order": 1},
+            {"choice_text": "K",  "is_correct": False, "display_order": 2},
+            {"choice_text": "FK", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 55. CONSTRAINT（1つ選べ・難易度2）ON DELETE SET NULL
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "CONSTRAINT",
+        "difficulty": 2,
+        "question_text": (
+            "以下の定義において、employees テーブルの manager_id=5 の行（上司）をDELETEした場合の\n"
+            "動作として正しいものを1つ選んでください。\n\n"
+            "CREATE TABLE employees (\n"
+            "  emp_id     NUMBER PRIMARY KEY,\n"
+            "  emp_name   VARCHAR2(50),\n"
+            "  manager_id NUMBER REFERENCES employees(emp_id) ON DELETE SET NULL\n"
+            ");"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "ON DELETE SET NULL を指定すると、親行を削除したときに\n"
+            "子テーブルの参照列（FK列）が NULL に更新されます。\n\n"
+            "この例での動作:\n"
+            "① employees の emp_id=5（上司）の行を DELETE\n"
+            "② その上司を参照していた部下の manager_id が NULL に自動更新される\n"
+            "③ 部下の行は削除されずに残る\n\n"
+            "ON DELETE オプションの比較:\n"
+            "・CASCADE:      親削除 → 子行も削除される\n"
+            "・SET NULL:     親削除 → 子のFK列がNULLになる（子行は残る）\n"
+            "・指定なし:     子行が存在する場合は親の削除がエラーになる\n\n"
+            "SET NULLを使うには、FK列がNOT NULL制約を持たないことが前提です。"
+        ),
+        "trap_reason": "ON DELETE SET NULLをON DELETE CASCADEと混同するパターン。CASCADEは子行を「削除」するが、SET NULLは子行を「残してFK列をNULLにする」。部下が消えるか残るかが最大の違い。",
+        "choices": [
+            {"choice_text": "manager_id=5を参照するすべての部下の行も自動的に削除される（CASCADE相当）",   "is_correct": False, "display_order": 0},
+            {"choice_text": "FK制約違反のエラーになりDELETEが拒否される",                               "is_correct": False, "display_order": 1},
+            {"choice_text": "上司の行が削除され、その上司を参照していた部下のmanager_idがNULLになる",     "is_correct": True,  "display_order": 2},
+            {"choice_text": "上司の行が削除され、部下のmanager_idは0（ゼロ）に更新される",               "is_correct": False, "display_order": 3},
+        ],
+    },
+
 ]
