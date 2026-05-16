@@ -388,13 +388,6 @@ function renderStats(stats) {
     detail.className   = 'stat-detail';
     detail.textContent = `${pct}% (${s.correct_count} / ${s.answered_count})`;
 
-    if (!enoughData) {
-      const note      = document.createElement('span');
-      note.className   = 'stat-note';
-      note.textContent = ` — あと${MIN_ANSWERS - s.answered_count}問`;
-      detail.appendChild(note);
-    }
-
     labelLine.append(name, detail);
 
     const track = document.createElement('div');
