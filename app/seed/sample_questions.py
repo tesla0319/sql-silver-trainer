@@ -2130,4 +2130,340 @@ SAMPLE_QUESTIONS = [
         ],
     },
 
+    # ──────────────────────────────────────────────────────────────────
+    # 66. INTERSECT（1つ選べ・難易度1）列数不一致エラー
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INTERSECT",
+        "difficulty": 1,
+        "question_text": (
+            "以下のSQL文の実行結果として正しいものを1つ選んでください。\n\n"
+            "SELECT employee_id, first_name, salary\n"
+            "FROM employees\n"
+            "UNION\n"
+            "SELECT department_id, department_name\n"
+            "FROM departments;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "集合演算子（UNION/UNION ALL/INTERSECT/MINUS）を使用するとき、\n"
+            "結合するすべてのSELECT文の選択列数は完全に一致している必要があります。\n\n"
+            "このSQL文:\n"
+            "・1つ目のSELECT: employee_id, first_name, salary → 3列\n"
+            "・2つ目のSELECT: department_id, department_name → 2列\n\n"
+            "列数が異なるため ORA-01789 エラーが発生します:\n"
+            "ORA-01789: クエリ・ブロックの結果列数が不正です\n\n"
+            "修正するには列数を合わせる必要があります（例: NULLを追加して列数を揃える）。"
+        ),
+        "trap_reason": "「列数が違っても少ない方に合わせて自動調整される」という誤解が多い。Oracleは列数の不一致を自動補完せず、必ずORA-01789エラーになる。NULLを明示的に追加して列数を合わせる必要がある。",
+        "choices": [
+            {"choice_text": "列数が異なるため少ない方（2列）に自動的に合わせてUNIONが実行される",      "is_correct": False, "display_order": 0},
+            {"choice_text": "列数が異なるためORA-01789エラーが発生し実行されない",                    "is_correct": True,  "display_order": 1},
+            {"choice_text": "1つ目のSELECTの最初の2列だけが2つ目とUNIONされる",                    "is_correct": False, "display_order": 2},
+            {"choice_text": "不足する列にNULLが自動補完されて3列の結果が返される",                   "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 67. INTERSECT（1つ選べ・難易度1）結果列名の決定ルール
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INTERSECT",
+        "difficulty": 1,
+        "question_text": (
+            "以下のSQL文の結果セットの列名として正しいものを1つ選んでください。\n\n"
+            "SELECT dept_id AS a_dept, dept_name AS a_name FROM dept_a\n"
+            "UNION\n"
+            "SELECT dept_id AS b_dept, dept_name AS b_name FROM dept_b;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "集合演算子を含む複合クエリの結果列名は、最初のSELECT文の列名（列別名）が使われます。\n\n"
+            "このSQL文では:\n"
+            "・最初のSELECT: AS a_dept, AS a_name\n"
+            "・2番目のSELECT: AS b_dept, AS b_name\n\n"
+            "結果列名 → a_dept, a_name（最初のSELECTの別名）\n\n"
+            "この仕様により、ORDER BY 句でも最初のSELECTの列名を使ってソートできます:\n"
+            "ORDER BY a_name DESC → 有効\n"
+            "ORDER BY b_name DESC → エラー（2番目のSELECTの列名は使えない）"
+        ),
+        "trap_reason": "「最後のSELECTの列名が使われる」「両方のSELECTの列名が使える」という誤解が多い。集合演算子の結果列名は常に最初のSELECT文の列名・列別名が採用される。",
+        "choices": [
+            {"choice_text": "a_dept と a_name（最初のSELECT文の列別名）", "is_correct": True,  "display_order": 0},
+            {"choice_text": "b_dept と b_name（最後のSELECT文の列別名）", "is_correct": False, "display_order": 1},
+            {"choice_text": "dept_id と dept_name（元の列名）",           "is_correct": False, "display_order": 2},
+            {"choice_text": "列名は定義されず位置番号（1, 2）のみで参照できる", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 68. INTERSECT（1つ選べ・難易度2）ORDER BYの位置制限
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INTERSECT",
+        "difficulty": 2,
+        "question_text": (
+            "以下のSQL文の実行結果として正しいものを1つ選んでください。\n\n"
+            "SELECT dept_id FROM dept_a ORDER BY dept_id\n"
+            "UNION\n"
+            "SELECT dept_id FROM dept_b;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "集合演算子を含む複合クエリでは、ORDER BY は最後に一度だけ書く必要があります。\n"
+            "個々のSELECT文の中にORDER BYを書くことはできません。\n\n"
+            "このSQL文は ORDER BY が UNION の前にあるためエラーになります:\n"
+            "ORA-00933: SQLコマンドが正しく終了されていません\n\n"
+            "正しい書き方:\n"
+            "SELECT dept_id FROM dept_a\n"
+            "UNION\n"
+            "SELECT dept_id FROM dept_b\n"
+            "ORDER BY dept_id;  ← 最後にまとめて指定\n\n"
+            "最後のORDER BYはUNION全体の結果に適用されます。"
+        ),
+        "trap_reason": "「最初のSELECTにORDER BYを書けばその部分だけソートされてUNIONされる」という誤解が多い。集合演算子とORDER BYを組み合わせる場合、ORDER BYは必ず最後のSELECTの後（全体の末尾）に1つだけ書く必要がある。",
+        "choices": [
+            {"choice_text": "最初のSELECTのORDER BYがUNION全体に適用されて実行される",            "is_correct": False, "display_order": 0},
+            {"choice_text": "ORA-00933エラーが発生し、集合演算子の前にORDER BYは書けない",         "is_correct": True,  "display_order": 1},
+            {"choice_text": "dept_aの結果のみORDER BYでソートされてからUNIONが実行される",         "is_correct": False, "display_order": 2},
+            {"choice_text": "ORDER BYは自動的にUNIONの後ろに移動して全体の結果がソートされる",     "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 69. INTERSECT（1つ選べ・難易度2）NULL値の扱い
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INTERSECT",
+        "difficulty": 2,
+        "question_text": (
+            "以下のデータでINTERSECTを実行した場合の結果として正しいものを1つ選んでください。\n\n"
+            "table_a の col1 の値: 1, NULL\n"
+            "table_b の col1 の値: NULL, 2\n\n"
+            "SELECT col1 FROM table_a\n"
+            "INTERSECT\n"
+            "SELECT col1 FROM table_b;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "集合演算子（UNION/INTERSECT/MINUS）では、NULLは「同じNULL」として扱われます。\n\n"
+            "通常の比較（WHERE句）では NULL = NULL はUNKNOWN（偽として扱われる）ですが、\n"
+            "集合演算子の重複判定では NULL同士が一致するとみなされます。\n\n"
+            "このINTERSECTの処理:\n"
+            "・col1 = 1: table_b に 1 は存在しない → 共通行なし\n"
+            "・col1 = NULL: table_b にも NULL が存在する → 共通行あり ✓\n\n"
+            "結果: NULL が1行返される\n\n"
+            "UNION の場合も同様に NULL の重複が除去されます（NULL が2つあっても1行になる）。"
+        ),
+        "trap_reason": "「NULL = NULLはUNKNOWNなので、INTERSECTでNULL同士は一致しない」という誤解が多い。集合演算子での重複判定はDISTINCTと同じ基準でNULL同士を等しいとみなす。通常のWHERE句での比較とは動作が異なる点が試験頻出のポイント。",
+        "choices": [
+            {"choice_text": "NULL = NULL はUNKNOWNのため一致行なし、0行が返される",  "is_correct": False, "display_order": 0},
+            {"choice_text": "集合演算子はNULL同士を等しいとみなすためNULLが1行返される", "is_correct": True,  "display_order": 1},
+            {"choice_text": "1とNULLの2行が返される",                                "is_correct": False, "display_order": 2},
+            {"choice_text": "NULLを含む行はINTERSECTの対象外となり自動的に除外される", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 70. INTERSECT（1つ選べ・難易度2）集合演算子の優先順位
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INTERSECT",
+        "difficulty": 2,
+        "question_text": (
+            "以下のSQL文の評価順序として正しいものを1つ選んでください。\n\n"
+            "SELECT a FROM t1\n"
+            "UNION\n"
+            "SELECT a FROM t2\n"
+            "INTERSECT\n"
+            "SELECT a FROM t3;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "Oracle SQL では INTERSECT は UNION / UNION ALL / MINUS より優先度が高いです。\n\n"
+            "このSQL文の評価順序:\n"
+            "1. まず INTERSECT が評価される:\n"
+            "   (t2 INTERSECT t3)\n"
+            "2. 次に UNION が評価される:\n"
+            "   t1 UNION (t2 INTERSECT t3)\n\n"
+            "もし優先順位を変えたい場合は括弧を使います:\n"
+            "  (SELECT a FROM t1 UNION SELECT a FROM t2)\n"
+            "  INTERSECT SELECT a FROM t3;\n\n"
+            "UNION / UNION ALL / MINUS は同じ優先順位で、左から右に評価されます。"
+        ),
+        "trap_reason": "「集合演算子はすべて同じ優先順位で左から右に評価される」という誤解が多い。INTERSECTはUNION/MINUS/UNION ALLより優先度が高い。括弧なしで混在させると、意図しない順序で評価される可能性がある。",
+        "choices": [
+            {"choice_text": "左から右に評価され、(t1 UNION t2) INTERSECT t3 となる",      "is_correct": False, "display_order": 0},
+            {"choice_text": "INTERSECTが先に評価され、t1 UNION (t2 INTERSECT t3) となる", "is_correct": True,  "display_order": 1},
+            {"choice_text": "UNIONが先に評価され、(t1 UNION t2) INTERSECT t3 となる",     "is_correct": False, "display_order": 2},
+            {"choice_text": "すべての集合演算子は同じ優先順位のため括弧なしでは実行できない", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 71. INTERSECT（1つ選べ・難易度2）UNION ALLとUNIONの性能差
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INTERSECT",
+        "difficulty": 2,
+        "question_text": "UNION と UNION ALL のパフォーマンスに関する説明として正しいものを1つ選んでください。",
+        "multi_select_count": 1,
+        "explanation": (
+            "UNION と UNION ALL のパフォーマンスの違い:\n\n"
+            "UNION:\n"
+            "・両方のSELECT結果を結合した後、重複行を除去する処理が必要\n"
+            "・重複除去にはソートまたはハッシュ処理が発生するためコストが高い\n\n"
+            "UNION ALL:\n"
+            "・重複除去なしに結果を単純に結合するだけ\n"
+            "・ソート/ハッシュ処理が不要なため一般的に高速\n"
+            "・ただし重複行がそのまま残る\n\n"
+            "重複が確実に存在しない場合（または重複を含めたい場合）は\n"
+            "UNION ALL を使うと性能向上が期待できます。"
+        ),
+        "trap_reason": "「UNIONは重複を除去してくれるため処理が複雑になるが、UNION ALLは単純なので同じ速度」という誤解が多い。UNIONはソート/ハッシュによる重複除去が発生するためUNION ALLより遅い。重複が不要な場合はUNION ALLを意識的に選択する。",
+        "choices": [
+            {"choice_text": "UNIONはUNION ALLより常に高速に実行される",                                       "is_correct": False, "display_order": 0},
+            {"choice_text": "UNION ALLは重複除去の処理が不要なためUNIONより一般的に高速だが重複行が含まれる",   "is_correct": True,  "display_order": 1},
+            {"choice_text": "UNIONとUNION ALLの実行速度は常に同一である",                                    "is_correct": False, "display_order": 2},
+            {"choice_text": "UNION ALLはNULL値を含む行を除外するため高速になる",                              "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 72. INTERSECT（1つ選べ・難易度2）MINUSの非対称性
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INTERSECT",
+        "difficulty": 2,
+        "question_text": (
+            "以下のデータで2つの問い合わせを実行した場合の結果として正しいものを1つ選んでください。\n\n"
+            "テーブルA の id 列の値: 1, 2, 3\n"
+            "テーブルB の id 列の値: 2, 3, 4\n\n"
+            "問い合わせ1: SELECT id FROM A MINUS SELECT id FROM B\n"
+            "問い合わせ2: SELECT id FROM B MINUS SELECT id FROM A"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "MINUS は差集合演算子です。「左のSELECT結果から右のSELECT結果に含まれる行を除いたもの」を返します。\n\n"
+            "問い合わせ1（A MINUS B）:\n"
+            "A = {1, 2, 3}、B = {2, 3, 4}\n"
+            "A にあってB にない行 = {1} → 1行\n\n"
+            "問い合わせ2（B MINUS A）:\n"
+            "B = {2, 3, 4}、A = {1, 2, 3}\n"
+            "B にあってA にない行 = {4} → 1行\n\n"
+            "MINUS は演算の順序（左右の入れ替え）で結果が変わります（非可換）。\n"
+            "UNION や INTERSECT は順序を入れ替えても同じ結果になります（可換）。"
+        ),
+        "trap_reason": "「MINUSはどちらを左右に書いても同じ結果になる（交換法則が成立する）」という誤解が多い。MINUSは左側にしか存在しない行を返すため、左右を入れ替えると結果が変わる非可換な演算子。UNIONやINTERSECTとは異なる点に注意。",
+        "choices": [
+            {"choice_text": "両方とも {2, 3} の2行を返す（どちらも共通行を除いた結果）",      "is_correct": False, "display_order": 0},
+            {"choice_text": "問い合わせ1は {1}、問い合わせ2は {4} を返す",                    "is_correct": True,  "display_order": 1},
+            {"choice_text": "問い合わせ1は {1, 2, 3}、問い合わせ2は {2, 3, 4} を返す",        "is_correct": False, "display_order": 2},
+            {"choice_text": "MINUSは演算順序に関わらず同じ結果を返す（交換法則が成立する）",   "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 73. INTERSECT（2つ選べ・難易度2）集合演算子の共通ルール
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INTERSECT",
+        "difficulty": 2,
+        "question_text": "集合演算子（UNION/UNION ALL/INTERSECT/MINUS）を使用するときの制約として正しいものを2つ選んでください。",
+        "multi_select_count": 2,
+        "explanation": (
+            "集合演算子の共通ルール:\n\n"
+            "① 列数の一致:\n"
+            "  各SELECT文の選択列数は同じでなければならない（ORA-01789）\n\n"
+            "② データ型の互換性:\n"
+            "  対応する位置の列は同じデータ型か互換性のあるデータ型でなければならない（ORA-01790）\n\n"
+            "③ 結果列名:\n"
+            "  最初のSELECT文の列名・列別名が結果セットの列名として使用される\n\n"
+            "④ ORDER BY の位置:\n"
+            "  ORDER BYは複合クエリ全体の末尾に一度だけ記述できる\n"
+            "  個々のSELECT文内には書けない（ORA-00933）\n\n"
+            "⑤ 参照テーブルの制限:\n"
+            "  各SELECT文は異なるテーブルを参照しても構わない"
+        ),
+        "trap_reason": "「集合演算子は同じテーブルしか参照できない」「列名が違っていてもよい」という誤解が多い。実際は異なるテーブルを自由に組み合わせられるが、列数と対応位置のデータ型の互換性は必須条件。",
+        "choices": [
+            {"choice_text": "各SELECT文の選択列数は同じでなければならない",                         "is_correct": True,  "display_order": 0},
+            {"choice_text": "ORDER BYは各SELECT文に個別に指定することができる",                    "is_correct": False, "display_order": 1},
+            {"choice_text": "結果セットの列名は最初のSELECT文の列名（列別名）が使用される",          "is_correct": True,  "display_order": 2},
+            {"choice_text": "集合演算子を使うすべてのSELECT文は同じテーブルを参照しなければならない", "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 74. INTERSECT（2つ選べ・難易度2）UNION vs UNION ALL の行数
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INTERSECT",
+        "difficulty": 2,
+        "question_text": (
+            "以下のデータで2つの問い合わせを実行した場合の説明として正しいものを2つ選んでください。\n\n"
+            "テーブルA の id 列の値: 1, 2, 2, 3\n"
+            "テーブルB の id 列の値: 2, 3, 4\n\n"
+            "問い合わせ1: SELECT id FROM A UNION     SELECT id FROM B\n"
+            "問い合わせ2: SELECT id FROM A UNION ALL SELECT id FROM B"
+        ),
+        "multi_select_count": 2,
+        "explanation": (
+            "問い合わせ1（UNION）:\n"
+            "A = {1, 2, 2, 3}、B = {2, 3, 4}\n"
+            "すべてを合わせて重複除去: {1, 2, 3, 4} → 4行\n\n"
+            "問い合わせ2（UNION ALL）:\n"
+            "A(4行) + B(3行) = 7行（重複保持）\n"
+            "結果: {1, 2, 2, 3, 2, 3, 4} の7行\n\n"
+            "UNION: A の重複 {2, 2} も除去対象になる点に注意\n"
+            "UNION ALL: A・B をそのまま縦結合するため A 内の重複もそのまま残る"
+        ),
+        "trap_reason": "「UNIONはAとBの間の重複のみを除去し、A内の重複は残る」という誤解が多い。UNIONは全体の結果セットから重複を除去するため、A内の重複行（この例ではid=2の2行）も1行に縮約される。結果は4行になる。",
+        "choices": [
+            {"choice_text": "問い合わせ1（UNION）は重複除去後 {1, 2, 3, 4} の4行を返す",               "is_correct": True,  "display_order": 0},
+            {"choice_text": "問い合わせ2（UNION ALL）は重複除去後 {1, 2, 3, 4} の4行を返す",           "is_correct": False, "display_order": 1},
+            {"choice_text": "問い合わせ2（UNION ALL）はAの4行とBの3行を合わせた7行を返す",              "is_correct": True,  "display_order": 2},
+            {"choice_text": "問い合わせ1（UNION）はAとBの間の重複のみ除去するため5行を返す",            "is_correct": False, "display_order": 3},
+        ],
+    },
+
+    # ──────────────────────────────────────────────────────────────────
+    # 75. INTERSECT（1つ選べ・難易度3）複合クエリの優先順位
+    # ──────────────────────────────────────────────────────────────────
+    {
+        "category": "INTERSECT",
+        "difficulty": 3,
+        "question_text": (
+            "以下のSQL文が内部的に評価される順序として正しいものを1つ選んでください。\n\n"
+            "SELECT a FROM t1\n"
+            "UNION\n"
+            "SELECT a FROM t2\n"
+            "INTERSECT\n"
+            "SELECT a FROM t3\n"
+            "UNION\n"
+            "SELECT a FROM t4;"
+        ),
+        "multi_select_count": 1,
+        "explanation": (
+            "集合演算子の優先順位:\n"
+            "・INTERSECT は UNION / UNION ALL / MINUS より優先度が高い\n"
+            "・UNION / UNION ALL / MINUS は同じ優先順位で左から右に評価される\n\n"
+            "このSQL文の評価順序:\n"
+            "① まず INTERSECT を評価:\n"
+            "   (t2 INTERSECT t3) を計算\n\n"
+            "② 次に UNION を左から右に評価:\n"
+            "   (t1 UNION (t2 INTERSECT t3)) UNION t4\n\n"
+            "最終的な形: (t1 UNION (t2 INTERSECT t3)) UNION t4\n\n"
+            "意図した順序と異なる可能性があるため、\n"
+            "集合演算子を混在させる場合は括弧で優先順位を明示することを推奨します。"
+        ),
+        "trap_reason": "「集合演算子はすべて同じ優先順位で左から右に評価される」という誤解が多い。INTERSECTが最優先で評価されるため、括弧なしでは意図しない評価順序になる可能性がある。複数の集合演算子を混在させる場合は必ず括弧で明示すべき。",
+        "choices": [
+            {"choice_text": "左から右に評価: ((t1 UNION t2) INTERSECT t3) UNION t4",      "is_correct": False, "display_order": 0},
+            {"choice_text": "INTERSECTが最優先: (t1 UNION (t2 INTERSECT t3)) UNION t4",   "is_correct": True,  "display_order": 1},
+            {"choice_text": "UNION が最優先: (t1 UNION t2 UNION t4) INTERSECT t3",        "is_correct": False, "display_order": 2},
+            {"choice_text": "右から左に評価: t1 UNION (t2 INTERSECT (t3 UNION t4))",      "is_correct": False, "display_order": 3},
+        ],
+    },
+
 ]
