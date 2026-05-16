@@ -21,6 +21,9 @@ class UserAnswer(Base):
     __tablename__ = "user_answers"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_name: Mapped[str] = mapped_column(
+        Text, nullable=False, default="guest", server_default="guest", index=True
+    )
     question_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("questions.id"), nullable=False, index=True
     )

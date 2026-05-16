@@ -137,3 +137,45 @@ class TestResetAnswers:
         response = client.delete("/api/answers")
         assert response.status_code == 200
         assert response.json()["deleted_count"] == 1
+
+
+class TestUserName:
+    """user_name フィールドのバリデーションと保存テスト。"""
+
+    def test_whitespace_only_returns_422(self, client, seeded_db):
+        """空白のみの user_name → 422。"""
+        response = client.post("/api/answers", json={
+            "question_id": seeded_db["q1_id"],
+            "selected_choice_ids": [seeded_db["q1_correct_choice_id"]],
+            "user_name": "   ",
+        })
+        assert response.status_code == 422
+
+    def test_username_is_stripped(self, client, db_session, seeded_db):
+        """前後の空白は strip されて保存される。"""
+        response = client.post("/api/answers", json={
+            "question_id": seeded_db["q1_id"],
+            "selected_choice_ids": [seeded_db["q1_correct_choice_id"]],
+            "user_name": "  alice  ",
+        })
+        assert response.status_code == 200
+        saved = db_session.query(UserAnswer).order_by(UserAnswer.id.desc()).first()
+        assert saved.user_name == "alice"
+
+    def test_default_username_is_guest(self, client, db_session, seeded_db):
+        """user_name 省略時は 'guest' として保存される（後方互換）。"""
+        client.post("/api/answers", json={
+            "question_id": seeded_db["q1_id"],
+            "selected_choice_ids": [seeded_db["q1_correct_choice_id"]],
+        })
+        saved = db_session.query(UserAnswer).order_by(UserAnswer.id.desc()).first()
+        assert saved.user_name == "guest"
+
+    def test_username_too_long_returns_422(self, client, seeded_db):
+        """51文字以上の user_name → 422。"""
+        response = client.post("/api/answers", json={
+            "question_id": seeded_db["q1_id"],
+            "selected_choice_ids": [seeded_db["q1_correct_choice_id"]],
+            "user_name": "a" * 51,
+        })
+        assert response.status_code == 422

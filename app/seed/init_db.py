@@ -24,6 +24,30 @@ def create_tables() -> None:
     print("テーブルを作成しました（既存テーブルはスキップ）。")
 
 
+def migrate_db() -> None:
+    """既存 DB に user_name 列を追加するマイグレーション（冪等）。
+
+    create_tables() は既存テーブルを変更しないため、
+    Phase 2 アップデート時にこの関数で列を追加する。
+    user_answers テーブルが存在しない場合は create_tables() に任せてスキップする。
+    """
+    from sqlalchemy import inspect, text
+
+    insp = inspect(engine)
+    if not insp.has_table("user_answers"):
+        return
+    existing_cols = [c["name"] for c in insp.get_columns("user_answers")]
+    if "user_name" not in existing_cols:
+        with engine.connect() as conn:
+            conn.execute(text(
+                "ALTER TABLE user_answers ADD COLUMN user_name TEXT NOT NULL DEFAULT 'guest'"
+            ))
+            conn.commit()
+        print("user_answers テーブルに user_name 列を追加しました。")
+    else:
+        print("user_name 列は既に存在します。スキップします。")
+
+
 def seed_questions(db: Session) -> None:
     """サンプル問題を投入する。既にデータがある場合はスキップする。"""
     existing_count = db.query(Question).count()
@@ -50,6 +74,7 @@ def seed_questions(db: Session) -> None:
 
 def main() -> None:
     create_tables()
+    migrate_db()
     db = SessionLocal()
     try:
         seed_questions(db)

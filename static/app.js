@@ -6,6 +6,9 @@
 const MIN_ANSWERS    = 3;
 const WEAK_THRESHOLD = 0.5;
 
+/* localStorage キー */
+const LS_USER_NAME = 'sql_silver_user_name';
+
 /* ==========================================================
    状態管理
    ========================================================== */
@@ -24,6 +27,9 @@ const state = {
   sessionAnswered: 0,
   sessionCorrect:  0,
   streak:          0,  // 連続正解数
+
+  // ユーザー名（localStorage から読み込む。未設定時は入力画面を表示）
+  userName: 'guest',
 
   view: 'quiz',  // 'quiz' | 'result' | 'stats'
 };
@@ -45,6 +51,11 @@ document.addEventListener('DOMContentLoaded', () => {
   el('btn-next').addEventListener('click',   loadQuestion);
   el('btn-back').addEventListener('click',   loadQuestion);
 
+  el('btn-set-username').addEventListener('click', onSetUsername);
+  el('input-username').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') onSetUsername();
+  });
+
   // キーボードショートカット: Enter キーで「次の問題へ」
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && state.view === 'result' && !e.repeat) {
@@ -52,8 +63,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  loadQuestion();
+  // localStorage からユーザー名を復元
+  const saved = localStorage.getItem(LS_USER_NAME);
+  if (saved) {
+    state.userName = saved;
+    updateUserDisplay();
+    loadQuestion();
+  } else {
+    showUsernameSection();
+  }
 });
+
+/* ==========================================================
+   ニックネーム設定
+   ========================================================== */
+function showUsernameSection() {
+  el('section-username').hidden = false;
+  el('section-quiz').hidden     = true;
+  el('section-result').hidden   = true;
+  el('section-stats').hidden    = true;
+}
+
+function onSetUsername() {
+  const raw  = el('input-username').value;
+  const name = raw.trim();
+  const errEl = el('username-error');
+
+  if (!name) {
+    errEl.textContent = 'ニックネームを入力してください（空白のみは不可）。';
+    errEl.hidden = false;
+    return;
+  }
+
+  errEl.hidden = true;
+  state.userName = name;
+  localStorage.setItem(LS_USER_NAME, name);
+  updateUserDisplay();
+  loadQuestion();
+}
+
+function updateUserDisplay() {
+  el('user-display').textContent = `👤 ${state.userName}`;
+}
 
 /* ==========================================================
    モード切替
@@ -109,7 +160,7 @@ async function loadQuestion() {
 }
 
 function buildQuestionUrl() {
-  const params = new URLSearchParams({ mode: state.mode });
+  const params = new URLSearchParams({ mode: state.mode, user_name: state.userName });
   // セッション除外IDを全て exclude_ids として送信
   state.sessionExcludeIds.forEach(id => params.append('exclude_ids', id));
   return `/api/questions/random?${params.toString()}`;
@@ -219,6 +270,7 @@ async function submitAnswer() {
       body:    JSON.stringify({
         question_id:         state.question.id,
         selected_choice_ids: [...state.selectedIds],
+        user_name:           state.userName,
       }),
     });
 
@@ -289,7 +341,8 @@ function renderResult(result) {
 async function loadStats() {
   removeError();
   try {
-    const res = await fetch('/api/stats/categories');
+    const url = `/api/stats/categories?user_name=${encodeURIComponent(state.userName)}`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     renderStats(data.stats);
@@ -380,6 +433,7 @@ function updateSessionStats() {
    ========================================================== */
 function setView(view) {
   state.view = view;
+  el('section-username').hidden = true;
   el('section-quiz').hidden   = (view === 'stats');
   el('section-result').hidden = (view !== 'result');
   el('section-stats').hidden  = (view !== 'stats');

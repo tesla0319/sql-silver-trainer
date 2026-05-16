@@ -13,6 +13,8 @@
     <header class="header">
       <div class="header-top">
         <h1 class="app-title">SQL Silver 学習支援</h1>
+        <!-- ユーザー表示: localStorage から取得したニックネームを表示 -->
+        <span id="user-display" class="user-display"></span>
         <!-- セッション統計: 回答後に更新される -->
         <span id="session-stats" class="session-stats"></span>
       </div>
@@ -25,6 +27,29 @@
     </header>
 
     <main class="main">
+
+      <!-- ④ ニックネーム入力セクション: 初回アクセス時のみ表示 -->
+      <section id="section-username" hidden>
+        <div class="card username-card">
+          <h2 class="card-heading">ようこそ！</h2>
+          <p class="username-desc">
+            ニックネームを入力してください。<br>
+            苦手分析はニックネームごとに管理されます。
+          </p>
+          <div class="username-form">
+            <input
+              id="input-username"
+              type="text"
+              class="input-text"
+              placeholder="例: alice"
+              maxlength="50"
+              autocomplete="off"
+            >
+            <button id="btn-set-username" class="btn btn-primary">スタート</button>
+          </div>
+          <p id="username-error" class="username-error" hidden></p>
+        </div>
+      </section>
 
       <!-- ① クイズセクション: quiz / result 両方で表示 -->
       <section id="section-quiz">

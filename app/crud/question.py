@@ -32,19 +32,20 @@ def get_question_by_id(db: Session, question_id: int) -> Question | None:
     return db.query(Question).filter(Question.id == question_id).first()
 
 
-def get_wrong_question_ids(db: Session) -> list[int]:
-    """最直近の回答が不正解だった question_id のリストを返す。
+def get_wrong_question_ids(db: Session, user_name: str = "guest") -> list[int]:
+    """最直近の回答が不正解だった question_id のリストを返す（user_name 単位）。
 
     「最直近」の定義: question_id ごとに user_answers.id が最大の行（= 最後に挿入した回答）。
     その行が is_correct=False であれば復習対象とする。
     一度正解した問題（最直近が正解）は克服済みとして除外する。
     """
-    # question_id ごとの最大 id（= 最新の回答）をサブクエリで取得
+    # user_name で絞った上で question_id ごとの最大 id（= 最新の回答）をサブクエリで取得
     latest_subq = (
         db.query(
             UserAnswer.question_id,
             func.max(UserAnswer.id).label("max_id"),
         )
+        .filter(UserAnswer.user_name == user_name)
         .group_by(UserAnswer.question_id)
         .subquery()
     )
@@ -57,6 +58,7 @@ def get_wrong_question_ids(db: Session) -> list[int]:
             & (UserAnswer.id == latest_subq.c.max_id),
         )
         .filter(UserAnswer.is_correct == False)  # noqa: E712 - SQLAlchemy は == で比較する
+        .filter(UserAnswer.user_name == user_name)
         .all()
     )
 

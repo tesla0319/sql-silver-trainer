@@ -1,6 +1,6 @@
 """統計 API エンドポイント。"""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.crud.stats import get_category_stats
@@ -12,13 +12,16 @@ router = APIRouter(prefix="/api/stats", tags=["stats"])
 
 
 @router.get("/categories", response_model=CategoryStatsResponse)
-def category_stats(db: Session = Depends(get_db)):
-    """カテゴリ別の正答率を返す。
+def category_stats(
+    user_name: str = Query(default="guest", min_length=1, max_length=50),
+    db: Session = Depends(get_db),
+):
+    """カテゴリ別の正答率を返す（user_name 単位）。
 
     - answered_count=0 のカテゴリは含めない（SPEC: 未着手と区別するため）
     - フロントは accuracy=0.0〜1.0 を受け取り、%表示に変換する
     """
-    raw_stats = get_category_stats(db)
+    raw_stats = get_category_stats(db, user_name=user_name)
 
     stats = [
         CategoryStatResponse(

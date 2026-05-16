@@ -424,3 +424,53 @@ body {
   .question-footer { justify-content: stretch; }
   .question-footer .btn { width: 100%; padding: 12px; font-size: 0.95rem; }
 }
+
+/* ── ユーザー名表示・入力フォーム ──────────────────────────── */
+.user-display {
+  font-size: 0.85rem;
+  color: var(--c-muted);
+  white-space: nowrap;
+}
+
+.username-card {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.username-desc {
+  color: var(--c-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.username-form {
+  display: flex;
+  gap: 8px;
+}
+
+.input-text {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  background: var(--c-surface);
+  color: var(--c-text);
+  outline: none;
+}
+
+.input-text:focus {
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-primary) 20%, transparent);
+}
+
+.username-error {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--c-wrong);
+}
+
+@media (max-width: 600px) {
+  .username-form { flex-direction: column; }
+}

@@ -14,8 +14,8 @@ from app.models.question import Question
 from app.models.user_answer import UserAnswer
 
 
-def get_category_stats(db: Session) -> list:
-    """カテゴリ別の回答数・正答数を集計して返す。
+def get_category_stats(db: Session, user_name: str = "guest") -> list:
+    """カテゴリ別の回答数・正答数を集計して返す（user_name 単位）。
 
     返り値: Row オブジェクトのリスト
       各 Row の属性: .category, .answered_count, .correct_count
@@ -28,6 +28,7 @@ def get_category_stats(db: Session) -> list:
             func.sum(case((UserAnswer.is_correct, 1), else_=0)).label("correct_count"),
         )
         .join(Question, UserAnswer.question_id == Question.id)
+        .filter(UserAnswer.user_name == user_name)
         .group_by(Question.category)
         .all()
     )

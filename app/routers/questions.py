@@ -43,14 +43,15 @@ def random_question(
     mode: Literal["normal", "weak", "review"] = "normal",
     category: str | None = None,
     exclude_ids: list[int] = Query(default=[]),
+    user_name: str = Query(default="guest", min_length=1, max_length=50),
     db: Session = Depends(get_db),
 ):
     """ランダムに1問取得する。
 
     mode:
       "normal": 全問題（またはcategory指定）からランダム出題
-      "weak"  : 苦手カテゴリから出題。苦手なし → 通常モードにフォールバック
-      "review": 最直近の回答が不正解の問題から出題。対象なし → 通常モードにフォールバック
+      "weak"  : 苦手カテゴリから出題（user_name 単位）。苦手なし → 通常モードにフォールバック
+      "review": 最直近の回答が不正解の問題から出題（user_name 単位）。対象なし → 通常モードにフォールバック
 
     exclude_ids:
       フロントエンドがセッション中に出題済みの question_id を送信する。
@@ -60,10 +61,10 @@ def random_question(
     question = None
 
     if mode == "weak":
-        question = _resolve_weak(db, exclude_ids)
+        question = _resolve_weak(db, exclude_ids, user_name=user_name)
 
     elif mode == "review":
-        question = _resolve_review(db, exclude_ids)
+        question = _resolve_review(db, exclude_ids, user_name=user_name)
 
     # normal または上記モードがフォールバックした場合
     if question is None:
@@ -75,9 +76,9 @@ def random_question(
     return question
 
 
-def _resolve_weak(db: Session, exclude_ids: list[int]):
-    """苦手カテゴリから問題を選ぶ。苦手カテゴリなし → None を返しフォールバックさせる。"""
-    raw_stats = get_category_stats(db)
+def _resolve_weak(db: Session, exclude_ids: list[int], user_name: str = "guest"):
+    """苦手カテゴリから問題を選ぶ（user_name 単位）。苦手カテゴリなし → None を返しフォールバックさせる。"""
+    raw_stats = get_category_stats(db, user_name=user_name)
     stats = [
         CategoryStat(
             category=row.category,
@@ -99,13 +100,13 @@ def _resolve_weak(db: Session, exclude_ids: list[int]):
     return _random_with_fallback(db, category=target_category, exclude_ids=exclude_ids)
 
 
-def _resolve_review(db: Session, exclude_ids: list[int]):
-    """最直近が不正解の問題から選ぶ。対象なし → None を返しフォールバックさせる。
+def _resolve_review(db: Session, exclude_ids: list[int], user_name: str = "guest"):
+    """最直近が不正解の問題から選ぶ（user_name 単位）。対象なし → None を返しフォールバックさせる。
 
     exclude_ids で全ての復習候補が尽きた場合は、除外を無視して復習候補から選び直す
     （セッションリセットをフロントエンドに検知させる）。
     """
-    wrong_ids = get_wrong_question_ids(db)
+    wrong_ids = get_wrong_question_ids(db, user_name=user_name)
     if not wrong_ids:
         return None  # 間違い問題なし → 通常モードにフォールバック
 

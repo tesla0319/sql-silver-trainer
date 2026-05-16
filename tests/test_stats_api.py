@@ -9,7 +9,13 @@ from app.models.user_answer import UserAnswer
 
 # --- フィクスチャヘルパー ---
 
-def _add_answers(db_session, question_id: int, is_correct: bool, count: int) -> None:
+def _add_answers(
+    db_session,
+    question_id: int,
+    is_correct: bool,
+    count: int,
+    user_name: str = "guest",
+) -> None:
     """指定数の回答履歴を直接 DB に挿入する。
     API 経由で挿入すると choice_id バリデーションが走るため、
     統計テスト用データはここで直接 INSERT する。
@@ -20,6 +26,7 @@ def _add_answers(db_session, question_id: int, is_correct: bool, count: int) -> 
             question_id=question_id,
             selected_choices=json.dumps([]),  # 統計クエリは参照しない
             is_correct=is_correct,
+            user_name=user_name,
         ))
     db_session.commit()
 
@@ -166,3 +173,66 @@ class TestWeakMode:
         response = client.get("/api/questions/random?mode=weak")
         assert response.status_code == 200
         assert response.json()["category"] in ("VIEW", "INDEX")
+
+
+# --- ユーザー別データ分離テスト ---
+
+class TestUserIsolation:
+    """alice と bob のデータが互いに干渉しないことを確認するテスト。"""
+
+    def test_stats_isolated_per_user(self, client, db_session):
+        """alice の統計に bob のデータは含まれない（逆も同様）。"""
+        view_id,  _ = _make_question(db_session, "VIEW")
+        index_id, _ = _make_question(db_session, "INDEX")
+
+        # alice は VIEW を 3回全不正解
+        _add_answers(db_session, view_id,  is_correct=False, count=3, user_name="alice")
+        # bob は INDEX を 3回全不正解
+        _add_answers(db_session, index_id, is_correct=False, count=3, user_name="bob")
+
+        alice_stats = client.get("/api/stats/categories?user_name=alice").json()["stats"]
+        bob_stats   = client.get("/api/stats/categories?user_name=bob").json()["stats"]
+
+        assert len(alice_stats) == 1
+        assert alice_stats[0]["category"] == "VIEW"
+
+        assert len(bob_stats) == 1
+        assert bob_stats[0]["category"] == "INDEX"
+
+    def test_weak_mode_isolated_per_user(self, client, db_session):
+        """weak mode で alice と bob がそれぞれ自分の苦手カテゴリから出題される。"""
+        view_id,  _ = _make_question(db_session, "VIEW")
+        index_id, _ = _make_question(db_session, "INDEX")
+
+        # alice は VIEW が苦手 / INDEX は得意
+        _add_answers(db_session, view_id,  is_correct=False, count=4, user_name="alice")
+        _add_answers(db_session, index_id, is_correct=True,  count=4, user_name="alice")
+        # bob は INDEX が苦手 / VIEW は得意
+        _add_answers(db_session, view_id,  is_correct=True,  count=4, user_name="bob")
+        _add_answers(db_session, index_id, is_correct=False, count=4, user_name="bob")
+
+        alice_q = client.get("/api/questions/random?mode=weak&user_name=alice").json()
+        bob_q   = client.get("/api/questions/random?mode=weak&user_name=bob").json()
+
+        assert alice_q["category"] == "VIEW"
+        assert bob_q["category"]   == "INDEX"
+
+    def test_guest_user_isolated_from_named_user(self, client, db_session):
+        """user_name 未指定（guest）と named user のデータは分離される。"""
+        view_id,  _ = _make_question(db_session, "VIEW")
+        index_id, _ = _make_question(db_session, "INDEX")
+
+        # guest は VIEW のみ回答
+        _add_answers(db_session, view_id, is_correct=True, count=3, user_name="guest")
+        # alice は INDEX のみ回答
+        _add_answers(db_session, index_id, is_correct=True, count=3, user_name="alice")
+
+        # user_name 省略（= guest） → VIEW のみ返す
+        guest_stats = client.get("/api/stats/categories").json()["stats"]
+        assert any(s["category"] == "VIEW"  for s in guest_stats)
+        assert not any(s["category"] == "INDEX" for s in guest_stats)
+
+        # user_name=alice → INDEX のみ返す
+        alice_stats = client.get("/api/stats/categories?user_name=alice").json()["stats"]
+        assert any(s["category"] == "INDEX" for s in alice_stats)
+        assert not any(s["category"] == "VIEW"  for s in alice_stats)

@@ -58,6 +58,7 @@ def submit_answer(body: AnswerRequest, db: Session = Depends(get_db)):
         question_id=question.id,
         selected_choice_ids=body.selected_choice_ids,
         is_correct=result.is_correct,
+        user_name=body.user_name,
     )
 
     return AnswerResponse(

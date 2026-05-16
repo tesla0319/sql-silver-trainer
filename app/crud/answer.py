@@ -12,12 +12,14 @@ def create_user_answer(
     question_id: int,
     selected_choice_ids: list[int],
     is_correct: bool,
+    user_name: str = "guest",
 ) -> UserAnswer:
     """回答を記録して返す。selected_choice_ids は JSON 文字列に変換して保存。"""
     answer = UserAnswer(
         question_id=question_id,
         selected_choices=json.dumps(selected_choice_ids),
         is_correct=is_correct,
+        user_name=user_name,
     )
     db.add(answer)
     db.commit()
