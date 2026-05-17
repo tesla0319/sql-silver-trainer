@@ -137,6 +137,12 @@ function setMode(mode) {
    問題取得・表示
    ========================================================== */
 async function loadQuestion() {
+  // normal mode = session テーマを復元、weak/review = normal 固定（補助学習空間）
+  if (state.mode === 'normal') {
+    restoreSessionTheme();
+  } else {
+    applyThemeVisual('normal');
+  }
   setView('quiz');
   el('question-loading').hidden = false;
   el('question-card').hidden    = true;
@@ -493,7 +499,18 @@ function onEnd() {
 function applyTheme(theme) {
   document.body.classList.remove('theme-normal', 'theme-dark');
   document.body.classList.add(`theme-${theme}`);
-  localStorage.setItem(LS_THEME, theme);
+  localStorage.setItem(LS_THEME, theme);  // セッション結果を永続保存
+}
+
+function applyThemeVisual(theme) {
+  document.body.classList.remove('theme-normal', 'theme-dark');
+  document.body.classList.add(`theme-${theme}`);
+  // localStorage は変更しない（保存済み session テーマを保持）
+}
+
+function restoreSessionTheme() {
+  const saved = localStorage.getItem(LS_THEME);
+  if (saved) applyThemeVisual(saved);
 }
 
 function updateTheme(stats) {
@@ -525,6 +542,7 @@ async function loadStats() {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    applyThemeVisual('normal');  // stats 画面は補助空間: normal 表示固定
     renderStats(data.stats);
     setView('stats');
     window.scrollTo({ top: 0, behavior: 'smooth' });
