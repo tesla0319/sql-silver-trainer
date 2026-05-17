@@ -33,7 +33,12 @@
 html { font-size: 16px; }
 body {
   font-family: 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic', system-ui, sans-serif;
-  background: var(--c-bg);
+  background-color: var(--c-bg);                          /* fallback: 画像読み込み前 / 失敗時 */
+  background-image: url('/static/images/background.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-attachment: fixed;
   color: var(--c-text);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -50,6 +55,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  background: rgba(255, 255, 255, 0.93);    /* 背景画像上での可読性確保 */
+  backdrop-filter: blur(4px);               /* すりガラス効果（任意・非対応でも無視） */
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .header-top {
@@ -406,6 +414,9 @@ body {
 
 /* ── レスポンシブ（モバイル）─────────────────────────────── */
 @media (max-width: 600px) {
+  /* iOS Safari では background-attachment: fixed が正常動作しないため scroll に切り替え */
+  body { background-attachment: scroll; }
+
   .app { padding: 0 12px; }
 
   .header-top { flex-wrap: wrap; }
