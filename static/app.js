@@ -8,6 +8,7 @@ const WEAK_THRESHOLD = 0.5;
 
 /* localStorage キー */
 const LS_USER_NAME = 'sql_silver_user_name';
+const LS_THEME     = 'sql_silver_theme';
 
 /* ==========================================================
    状態管理
@@ -62,6 +63,10 @@ document.addEventListener('DOMContentLoaded', () => {
       loadQuestion();
     }
   });
+
+  // localStorage からテーマを復元（ユーザー名より先に適用してレイアウトシフトを防ぐ）
+  const savedTheme = localStorage.getItem(LS_THEME);
+  if (savedTheme) applyTheme(savedTheme);
 
   // localStorage からユーザー名を復元
   const saved = localStorage.getItem(LS_USER_NAME);
@@ -296,6 +301,7 @@ async function submitAnswer() {
 
     applyResultHighlights(result);
     renderResult(result);
+    refreshThemeInBackground();  // 正答率が変化したのでテーマを非同期更新
 
   } catch (err) {
     showError(`回答の送信に失敗しました: ${err.message}`);
@@ -336,6 +342,36 @@ function renderResult(result) {
 }
 
 /* ==========================================================
+   テーマ切替（正答率連動）
+   ========================================================== */
+function applyTheme(theme) {
+  document.body.classList.remove('theme-normal', 'theme-dark');
+  document.body.classList.add(`theme-${theme}`);
+  localStorage.setItem(LS_THEME, theme);
+}
+
+function updateTheme(stats) {
+  const totalAnswered = stats.reduce((s, r) => s + r.answered_count, 0);
+  const totalCorrect  = stats.reduce((s, r) => s + r.correct_count, 0);
+  if (totalAnswered === 0) return;               // 未回答: 変更しない
+  const acc = totalCorrect / totalAnswered;
+  if      (acc < 0.40)  applyTheme('dark');     // 39%以下 → dark
+  else if (acc >= 0.70) applyTheme('normal');   // 70%以上 → normal
+  // 40〜69%: 何もしない（現在テーマ維持・ヒステリシス）
+}
+
+async function refreshThemeInBackground() {
+  try {
+    const res = await fetch(`/api/stats/categories?user_name=${encodeURIComponent(state.userName)}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    updateTheme(data.stats);
+  } catch {
+    // ネットワークエラーは無視（テーマ更新失敗はUIに影響しない）
+  }
+}
+
+/* ==========================================================
    苦手分析
    ========================================================== */
 async function loadStats() {
@@ -345,6 +381,7 @@ async function loadStats() {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    updateTheme(data.stats);
     renderStats(data.stats);
     setView('stats');
     window.scrollTo({ top: 0, behavior: 'smooth' });
