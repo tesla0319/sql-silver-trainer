@@ -55,16 +55,16 @@ body.theme-dark {
 }
 
 /* ── レイアウト ───────────────────────────────────────────── */
-.app  { max-width: var(--max-w); margin: 0 auto; padding: 0 16px; }
+.app  { max-width: var(--max-w); margin: 0 auto; padding: 0 24px; }
 .main { padding: 24px 0 56px; display: flex; flex-direction: column; gap: 16px; }
 
 /* ── ヘッダー ─────────────────────────────────────────────── */
 .header {
-  padding: 14px 0 12px;
+  padding: 18px 0 16px;
   border-bottom: 2px solid var(--c-border);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
   background: rgba(255, 255, 255, 0.93);    /* 背景画像上での可読性確保 */
   backdrop-filter: blur(4px);               /* すりガラス効果（任意・非対応でも無視） */
   -webkit-backdrop-filter: blur(4px);
@@ -427,7 +427,7 @@ body.theme-dark {
   /* iOS Safari では background-attachment: fixed が正常動作しないため scroll に切り替え */
   body { background-attachment: scroll; }
 
-  .app { padding: 0 12px; }
+  .app { padding: 0 16px; }
 
   .header-top { flex-wrap: wrap; }
   .session-stats { font-size: 0.78rem; }
