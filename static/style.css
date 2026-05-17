@@ -37,7 +37,7 @@ body {
   background-image: url('/static/images/background.png');
   background-size: cover;
   background-repeat: no-repeat;
-  background-position: center;
+  background-position: 40% 40%;
   background-attachment: fixed;
   color: var(--c-text);
   line-height: 1.6;
