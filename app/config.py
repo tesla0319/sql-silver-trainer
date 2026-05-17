@@ -4,6 +4,7 @@
 DATABASE_URL = "sqlite:///./app.db"
 
 # カテゴリ一覧: typo防止のため定数として管理し、seedとAPIでこの値を参照する
+# rev.4: DICTIONARY_VIEW → DATA_DICTIONARY に統合, DB_THEORY → RDB_THEORY に統合
 CATEGORIES = [
     "VIEW",
     "INDEX",
@@ -11,10 +12,8 @@ CATEGORIES = [
     "INTERSECT",
     "SUBQUERY",
     "CONSTRAINT",
-    "DICTIONARY_VIEW",
     "FUNCTION_NEST",
     "ORACLE_TERM",
-    "DB_THEORY",
     "JOIN",
     "CORRELATED_SUBQUERY",
     "DATA_DICTIONARY",

@@ -211,7 +211,7 @@ SAMPLE_QUESTIONS = [
     # 8. DICTIONARY_VIEW（単一選択・難易度2）
     # ──────────────────────────────────────────────────────────────────
     {
-        "category": "DICTIONARY_VIEW",
+        "category": "DATA_DICTIONARY",
         "difficulty": 2,
         "question_text": "Oracleのデータディクショナリビューのプレフィックスとアクセス範囲の組み合わせとして正しいものを1つ選んでください。",
         "multi_select_count": 1,
@@ -266,7 +266,7 @@ SAMPLE_QUESTIONS = [
     # 10. DB_THEORY（単一選択・難易度1）
     # ──────────────────────────────────────────────────────────────────
     {
-        "category": "DB_THEORY",
+        "category": "RDB_THEORY",
         "difficulty": 1,
         "question_text": "トランザクションのACID特性のうち、「一度コミットされたトランザクションの結果は、障害が発生しても失われない」という特性はどれですか？",
         "multi_select_count": 1,
@@ -427,7 +427,7 @@ SAMPLE_QUESTIONS = [
     # 15. DB_THEORY（3つ選べ・難易度3・長文）
     # ──────────────────────────────────────────────────────────────────
     {
-        "category": "DB_THEORY",
+        "category": "RDB_THEORY",
         "difficulty": 3,
         "question_text": (
             "Oracle SQL における NULL の扱いについて、正しい記述を3つ選んでください。\n\n"
