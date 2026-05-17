@@ -32,7 +32,15 @@ const state = {
   // ユーザー名（localStorage から読み込む。未設定時は入力画面を表示）
   userName: 'guest',
 
-  view: 'quiz',  // 'quiz' | 'result' | 'stats'
+  view: 'quiz',  // 'quiz' | 'result' | 'stats' | 'training-result'
+
+  // 10問トレーニング セッション状態
+  trainingCount:     0,   // 現セッションの回答数 (0–10)
+  trainingCorrect:   0,   // 正答数
+  trainingLog:       [],  // [{category, is_correct}, ...] 直近10問（テーマ判定に使用）
+  trainingCatCounts: {},  // normal mode 偏り抑制: { 'VIEW': 2, ... }
+  trainingLastCats:  [],  // 3連続チェック用: 直近2カテゴリ
+  trainingFinished:  false, // 10問完了フラグ（btn-next の動作切替に使用）
 };
 
 /* ==========================================================
@@ -49,18 +57,20 @@ document.addEventListener('DOMContentLoaded', () => {
   el('btn-review').addEventListener('click', () => setMode('review'));
   el('btn-stats').addEventListener('click',  loadStats);
   el('btn-submit').addEventListener('click', submitAnswer);
-  el('btn-next').addEventListener('click',   loadQuestion);
+  el('btn-next').addEventListener('click',   onNextClick);
   el('btn-back').addEventListener('click',   loadQuestion);
+  el('btn-retry').addEventListener('click',  onRetry);
+  el('btn-end').addEventListener('click',    onEnd);
 
   el('btn-set-username').addEventListener('click', onSetUsername);
   el('input-username').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') onSetUsername();
   });
 
-  // キーボードショートカット: Enter キーで「次の問題へ」
+  // キーボードショートカット: Enter キーで「次の問題へ」または「結果を見る」
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && state.view === 'result' && !e.repeat) {
-      loadQuestion();
+      onNextClick();
     }
   });
 
@@ -119,6 +129,7 @@ function setMode(mode) {
   el('btn-normal').classList.toggle('active', mode === 'normal');
   el('btn-weak').classList.toggle('active',   mode === 'weak');
   el('btn-review').classList.toggle('active', mode === 'review');
+  resetTrainingSession();  // モード切替 = 新しい10問セッション開始
   loadQuestion();
 }
 
@@ -166,9 +177,27 @@ async function loadQuestion() {
 
 function buildQuestionUrl() {
   const params = new URLSearchParams({ mode: state.mode, user_name: state.userName });
-  // セッション除外IDを全て exclude_ids として送信
+  // セッション除外IDを全て exclude_ids として送信（同一問題の再出題防止）
   state.sessionExcludeIds.forEach(id => params.append('exclude_ids', id));
+  // normal mode のみカテゴリ偏り抑制を適用
+  if (state.mode === 'normal') {
+    getBannedCategories().forEach(cat => params.append('excluded_categories', cat));
+  }
   return `/api/questions/random?${params.toString()}`;
+}
+
+function getBannedCategories() {
+  const banned = new Set();
+  // 同カテゴリ2問到達したカテゴリを除外
+  Object.entries(state.trainingCatCounts).forEach(([cat, count]) => {
+    if (count >= 2) banned.add(cat);
+  });
+  // 3連続チェック: 直近2カテゴリが同じなら追加で除外
+  if (state.trainingLastCats.length >= 2) {
+    const [a, b] = state.trainingLastCats.slice(-2);
+    if (a === b) banned.add(a);
+  }
+  return [...banned];
 }
 
 function renderQuestion() {
@@ -301,7 +330,7 @@ async function submitAnswer() {
 
     applyResultHighlights(result);
     renderResult(result);
-    refreshThemeInBackground();  // 正答率が変化したのでテーマを非同期更新
+    updateTrainingState(result.is_correct);  // トレーニング状態更新（テーマ・10問判定を含む）
 
   } catch (err) {
     showError(`回答の送信に失敗しました: ${err.message}`);
@@ -342,6 +371,124 @@ function renderResult(result) {
 }
 
 /* ==========================================================
+   10問トレーニング制御
+   ========================================================== */
+function updateTrainingState(is_correct) {
+  const cat = state.question.category;
+
+  state.trainingCount++;
+  if (is_correct) state.trainingCorrect++;
+
+  // trainingLog: 直近10問を常に保持（テーマ判定用）
+  state.trainingLog.push({ category: cat, is_correct });
+  if (state.trainingLog.length > 10) state.trainingLog.shift();
+
+  // normal mode: カテゴリ偏り抑制のための追跡
+  if (state.mode === 'normal') {
+    state.trainingCatCounts[cat] = (state.trainingCatCounts[cat] || 0) + 1;
+    state.trainingLastCats.push(cat);
+    if (state.trainingLastCats.length > 2) state.trainingLastCats.shift();
+  }
+
+  updateThemeFromTraining();
+
+  if (state.trainingCount >= 10) {
+    state.trainingFinished = true;
+    el('btn-next').textContent = '結果を見る';
+  }
+}
+
+function showTrainingResult() {
+  const log    = state.trainingLog;
+  const total  = log.length;
+  const correct = log.filter(r => r.is_correct).length;
+  const pct    = total > 0 ? Math.round(correct / total * 100) : 0;
+
+  // セッション内の不正解をカテゴリ別に集計（上位3件）
+  const catErrors = {};
+  log.forEach(r => {
+    if (!r.is_correct) catErrors[r.category] = (catErrors[r.category] || 0) + 1;
+  });
+  const weakCats = Object.entries(catErrors)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
+
+  const summary = el('training-summary');
+  summary.textContent = '';
+
+  const score = document.createElement('p');
+  score.className   = 'training-score';
+  score.textContent = `正解 ${correct} / ${total}問（${pct}%）`;
+  summary.appendChild(score);
+
+  if (weakCats.length > 0) {
+    const label = document.createElement('p');
+    label.className   = 'training-weak-label';
+    label.textContent = '今回の苦手カテゴリ';
+    summary.appendChild(label);
+
+    const list = document.createElement('ul');
+    list.className = 'training-weak-list';
+    weakCats.forEach(([cat, count]) => {
+      const item = document.createElement('li');
+      item.className   = 'training-weak-item';
+      item.textContent = `⚠ ${cat}（${count}問ミス）`;
+      list.appendChild(item);
+    });
+    summary.appendChild(list);
+  } else {
+    const perfect = document.createElement('p');
+    perfect.className   = 'training-all-good';
+    perfect.textContent = '苦手カテゴリなし！素晴らしい！';
+    summary.appendChild(perfect);
+  }
+
+  setView('training-result');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetTrainingSession() {
+  state.trainingCount     = 0;
+  state.trainingCorrect   = 0;
+  state.trainingLog       = [];
+  state.trainingCatCounts = {};
+  state.trainingLastCats  = [];
+  state.trainingFinished  = false;
+  state.sessionExcludeIds = new Set();
+  state.lastQuestionId    = null;
+  state.sessionAnswered   = 0;
+  state.sessionCorrect    = 0;
+  state.streak            = 0;
+  updateSessionStats();
+  // btn-next テキストをデフォルトに戻す
+  el('btn-next').innerHTML = '次の問題へ <span class="key-hint">Enter</span>';
+}
+
+function onNextClick() {
+  if (state.trainingFinished) {
+    showTrainingResult();
+  } else {
+    loadQuestion();
+  }
+}
+
+function onRetry() {
+  resetTrainingSession();
+  loadQuestion();
+}
+
+function onEnd() {
+  resetTrainingSession();
+  if (state.mode !== 'normal') {
+    state.mode = 'normal';
+    el('btn-normal').classList.add('active');
+    el('btn-weak').classList.remove('active');
+    el('btn-review').classList.remove('active');
+  }
+  loadQuestion();
+}
+
+/* ==========================================================
    テーマ切替（正答率連動）
    ========================================================== */
 function applyTheme(theme) {
@@ -360,15 +507,13 @@ function updateTheme(stats) {
   // 40〜69%: 何もしない（現在テーマ維持・ヒステリシス）
 }
 
-async function refreshThemeInBackground() {
-  try {
-    const res = await fetch(`/api/stats/categories?user_name=${encodeURIComponent(state.userName)}`);
-    if (!res.ok) return;
-    const data = await res.json();
-    updateTheme(data.stats);
-  } catch {
-    // ネットワークエラーは無視（テーマ更新失敗はUIに影響しない）
-  }
+function updateThemeFromTraining() {
+  const log = state.trainingLog;
+  if (log.length === 0) return;
+  const acc = log.filter(r => r.is_correct).length / log.length;
+  if      (acc < 0.40)  applyTheme('dark');    // 直近10問が40%未満 → dark
+  else if (acc >= 0.70) applyTheme('normal');  // 直近10問が70%以上 → normal
+  // 40〜69%: 現在テーマ維持（ヒステリシス）
 }
 
 /* ==========================================================
@@ -381,7 +526,7 @@ async function loadStats() {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    updateTheme(data.stats);
+    updateThemeFromTraining();   // テーマは直近10問（trainingLog）ベースに統一
     renderStats(data.stats);
     setView('stats');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -463,10 +608,11 @@ function updateSessionStats() {
    ========================================================== */
 function setView(view) {
   state.view = view;
-  el('section-username').hidden = true;
-  el('section-quiz').hidden   = (view === 'stats');
-  el('section-result').hidden = (view !== 'result');
-  el('section-stats').hidden  = (view !== 'stats');
+  el('section-username').hidden          = true;
+  el('section-quiz').hidden              = (view === 'stats' || view === 'training-result');
+  el('section-result').hidden            = (view !== 'result');
+  el('section-stats').hidden             = (view !== 'stats');
+  el('section-training-result').hidden   = (view !== 'training-result');
 }
 
 /* ==========================================================

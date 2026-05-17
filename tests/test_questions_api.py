@@ -193,3 +193,38 @@ class TestReviewMode:
         response = client.get("/api/questions/random?mode=review")
         assert response.status_code == 200
         assert response.json()["id"] == seeded_db["q1_id"]
+
+
+class TestExcludeCategories:
+    """excluded_categories パラメータのテスト（10問トレーニング偏り抑制）。"""
+
+    def test_excluded_category_not_returned(self, client, seeded_db):
+        """VIEW と INDEX を除外すると CONSTRAINT の問題だけが返る。"""
+        # seeded_db: VIEW(q1), INDEX(q2), CONSTRAINT(q3) の3問
+        response = client.get(
+            "/api/questions/random"
+            "?excluded_categories=VIEW&excluded_categories=INDEX"
+        )
+        assert response.status_code == 200
+        assert response.json()["category"] == "CONSTRAINT"
+
+    def test_single_excluded_category(self, client, seeded_db):
+        """1カテゴリ除外で残りのカテゴリから返る。"""
+        response = client.get("/api/questions/random?excluded_categories=VIEW")
+        assert response.status_code == 200
+        assert response.json()["category"] != "VIEW"
+
+    def test_all_excluded_fallback(self, client, seeded_db):
+        """全カテゴリ除外でもフォールバックして問題を返す（404 にならない）。"""
+        response = client.get(
+            "/api/questions/random"
+            "?excluded_categories=VIEW&excluded_categories=INDEX&excluded_categories=CONSTRAINT"
+        )
+        assert response.status_code == 200
+        assert "id" in response.json()
+
+    def test_excluded_categories_empty_is_normal(self, client, seeded_db):
+        """excluded_categories 省略は通常モードと同じ（後方互換）。"""
+        response = client.get("/api/questions/random")
+        assert response.status_code == 200
+        assert "id" in response.json()

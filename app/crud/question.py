@@ -11,19 +11,22 @@ def get_random_question(
     db: Session,
     category: str | None = None,
     exclude_ids: list[int] | None = None,
+    excluded_categories: list[str] | None = None,
 ) -> Question | None:
     """ランダムに1問取得する。
 
     Args:
-        category:    指定時はそのカテゴリに絞る
-        exclude_ids: 除外する question_id のリスト（セッション除外に使用）
-                     除外後に候補が0件になった場合はフォールバックしない（呼び出し側で制御）
+        category:             指定時はそのカテゴリに絞る
+        exclude_ids:          除外する question_id のリスト（セッション除外）
+        excluded_categories:  除外するカテゴリのリスト（10問セッションの偏り抑制）
     """
     query = db.query(Question)
     if category:
         query = query.filter(Question.category == category)
     if exclude_ids:
         query = query.filter(Question.id.notin_(exclude_ids))
+    if excluded_categories:
+        query = query.filter(Question.category.notin_(excluded_categories))
     return query.order_by(func.random()).first()
 
 

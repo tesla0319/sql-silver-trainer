@@ -25,16 +25,32 @@ def _random_with_fallback(
     *,
     category: str | None,
     exclude_ids: list[int],
+    excluded_categories: list[str] | None = None,
 ):
-    """exclude_ids を適用してランダム取得。候補が尽きた場合は除外なしでフォールバック。
+    """exclude_ids / excluded_categories を適用してランダム取得。候補が尽きた段階的フォールバック。
 
-    フォールバックした場合、フロントエンドは「返ってきた question.id が
-    sessionExcludeIds に含まれている」ことを検知してセッションをリセットする。
+    フォールバック順:
+      1. 両方の除外を適用して取得
+      2. exclude_ids を外してリトライ（出題済みID除外が原因の場合）
+      3. excluded_categories を外してリトライ（カテゴリ全除外が原因の場合）
     """
-    question = get_random_question(db, category=category, exclude_ids=exclude_ids or None)
+    question = get_random_question(
+        db, category=category,
+        exclude_ids=exclude_ids or None,
+        excluded_categories=excluded_categories or None,
+    )
     if question is None and exclude_ids:
-        # セッションの問題が全て出題済み → 除外なしでフォールバック
-        question = get_random_question(db, category=category, exclude_ids=None)
+        question = get_random_question(
+            db, category=category,
+            exclude_ids=None,
+            excluded_categories=excluded_categories or None,
+        )
+    if question is None and excluded_categories:
+        question = get_random_question(
+            db, category=category,
+            exclude_ids=exclude_ids or None,
+            excluded_categories=None,
+        )
     return question
 
 
@@ -44,6 +60,7 @@ def random_question(
     category: str | None = None,
     exclude_ids: list[int] = Query(default=[]),
     user_name: str = Query(default="guest", min_length=1, max_length=50),
+    excluded_categories: list[str] = Query(default=[]),
     db: Session = Depends(get_db),
 ):
     """ランダムに1問取得する。
@@ -56,7 +73,10 @@ def random_question(
     exclude_ids:
       フロントエンドがセッション中に出題済みの question_id を送信する。
       該当問題を除いてランダム選択する。全問除外された場合はフォールバックして返す。
-      フロントエンドは返ってきた問題が sessionExcludeIds に含まれていればセッションリセットを行う。
+
+    excluded_categories:
+      10問セッションで同カテゴリ集中を抑制するための除外カテゴリリスト（normal モード専用）。
+      全カテゴリ除外になった場合はフォールバックして返す。
     """
     question = None
 
@@ -68,7 +88,10 @@ def random_question(
 
     # normal または上記モードがフォールバックした場合
     if question is None:
-        question = _random_with_fallback(db, category=category, exclude_ids=exclude_ids)
+        question = _random_with_fallback(
+            db, category=category, exclude_ids=exclude_ids,
+            excluded_categories=excluded_categories or None,
+        )
 
     if question is None:
         raise HTTPException(status_code=404, detail="No questions found")

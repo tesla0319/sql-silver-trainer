@@ -495,3 +495,26 @@ body.theme-dark {
 @media (max-width: 600px) {
   .username-form { flex-direction: column; }
 }
+
+/* ── トレーニング結果 ──────────────────────────────────── */
+.training-score {
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.training-weak-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--c-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 8px;
+}
+
+.training-weak-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.training-weak-item { font-size: 0.9rem; color: var(--c-wrong); }
+.training-all-good  { font-size: 0.9rem; color: var(--c-correct); text-align: center; }
+
+#section-training-result .btn { margin-top: 12px; }
