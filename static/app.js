@@ -390,8 +390,6 @@ function updateTrainingState(is_correct) {
     if (state.trainingLastCats.length > 2) state.trainingLastCats.shift();
   }
 
-  updateThemeFromTraining();
-
   if (state.trainingCount >= 10) {
     state.trainingFinished = true;
     el('btn-next').textContent = '結果を見る';
@@ -399,6 +397,7 @@ function updateTrainingState(is_correct) {
 }
 
 function showTrainingResult() {
+  updateThemeFromTraining();  // セッション結果確定時のみテーマを更新
   const log    = state.trainingLog;
   const total  = log.length;
   const correct = log.filter(r => r.is_correct).length;
@@ -526,7 +525,6 @@ async function loadStats() {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    updateThemeFromTraining();   // テーマは直近10問（trainingLog）ベースに統一
     renderStats(data.stats);
     setView('stats');
     window.scrollTo({ top: 0, behavior: 'smooth' });
